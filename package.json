@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "dev:server": "tsx --env-file=.env.local server/index.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "test": "node --env-file=.env.local node_modules/.bin/playwright test",
     "start": "tsx server/index.ts"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
     "tsx": "^4.21.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",

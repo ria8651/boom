@@ -2,3 +2,6 @@ node_modules
 dist
 .env.local
 .claude/settings.local.json
+e2e/screenshots
+e2e/results
+test-results

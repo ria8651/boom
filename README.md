@@ -6,7 +6,7 @@ Video conferencing with end-to-end encryption, powered by LiveKit.
 
 ### Environment
 
-Copy `.env.example` to `.env` and fill in your values:
+Copy `.env.example` to `.env.local` and fill in your values:
 
 ```
 LIVEKIT_API_KEY=...        # From your LiveKit server config
@@ -29,13 +29,28 @@ npm run dev:server
 npm run dev
 ```
 
-The frontend runs on `http://localhost:5173` and proxies `/api` requests to the backend on port 3000.
+The frontend runs on `http://localhost:5173` and proxies `/api` requests to the backend on port 3000. Both are accessible on your local network for testing on other devices.
+
+### Testing
+
+```bash
+# Run all tests (needs dev servers running)
+npm test
+
+# Run with headed browser
+npm test -- --headed
+
+# Run only the live test (requires .env.local with valid credentials)
+npm test -- e2e/live.spec.ts
+```
+
+Screenshots are saved to `e2e/screenshots/`.
 
 ### Production (Docker)
 
 ```bash
 docker build -t boom .
-docker run -p 3000:3000 --env-file .env boom
+docker run -p 3000:3000 --env-file .env.local boom
 ```
 
 ### Docker Compose
@@ -71,4 +86,3 @@ Users enter a display name, room name, and password. The server validates the pa
 - **Mobile responsive layout** — responsive grid breakpoints, touch-friendly controls
 - **Picture-in-picture** — Browser PiP API for the focused video track
 - **Room list / lobby** — browse and join active rooms
-- **Display name persistence** — remember name across sessions

@@ -38,36 +38,9 @@ app.post("/api/token", async (req, res) => {
 
   const jwt = await token.toJwt();
 
-  // Validate the token against the LiveKit server before handing it to the client.
-  // This catches misconfigurations (wrong API key, unreachable server) early
-  // with a clear error, instead of the client seeing a cryptic WebSocket failure.
-  const livekitUrl = process.env.LIVEKIT_URL;
-  if (livekitUrl) {
-    const httpUrl = livekitUrl.replace(/^wss:\/\//, "https://").replace(/^ws:\/\//, "http://");
-    try {
-      const validateRes = await fetch(
-        `${httpUrl}/rtc/v1/validate?access_token=${jwt}`,
-      );
-      if (!validateRes.ok) {
-        const body = await validateRes.text();
-        console.error(`LiveKit validation failed (${validateRes.status}): ${body}`);
-        res.status(502).json({
-          error: `LiveKit server rejected the connection: ${body || validateRes.statusText}. Check your API key/secret and server configuration.`,
-        });
-        return;
-      }
-    } catch (err) {
-      console.error("Could not reach LiveKit server:", err);
-      res.status(502).json({
-        error: `Could not reach LiveKit server at ${livekitUrl}. Check that it is running and the URL is correct.`,
-      });
-      return;
-    }
-  }
-
   res.json({
     token: jwt,
-    serverUrl: livekitUrl,
+    serverUrl: process.env.LIVEKIT_URL,
   });
 });
 

@@ -63,19 +63,67 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Chat panel border */
+/* Chat panel */
 [data-lk-theme="boom"] .lk-chat {
   border-left: 1px solid rgba(255, 255, 255, 0.08);
+  align-items: stretch;
+  grid-template-rows: auto 1fr auto;
 }
 
-/* Control bar — integrated feel */
+[data-lk-theme="boom"] .lk-chat-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+}
+
+[data-lk-theme="boom"] .lk-chat-header .lk-close-button {
+  position: static;
+  transform: none;
+  margin-left: auto;
+}
+
+/* Message bubbles */
+[data-lk-theme="boom"] .lk-chat-entry[data-lk-message-origin="local"] .lk-message-body {
+  background-color: rgb(50, 50, 50);
+  color: rgb(231, 231, 231);
+}
+
+[data-lk-theme="boom"] .lk-chat-entry[data-lk-message-origin="remote"] .lk-message-body {
+  background-color: rgba(16, 194, 238, 0.15);
+  color: rgb(231, 231, 231);
+}
+
+/* Video conference layout — control bar pinned to bottom */
+[data-lk-theme="boom"] .lk-video-conference-inner {
+  height: 100%;
+}
+
+[data-lk-theme="boom"] .lk-grid-layout-wrapper,
+[data-lk-theme="boom"] .lk-focus-layout-wrapper {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Control bar — pinned to bottom */
 [data-lk-theme="boom"] .lk-control-bar {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: auto;
 }
 
-/* Participant tiles — subtle border */
+/* Participant tiles */
 [data-lk-theme="boom"] .lk-participant-tile {
   border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Camera-off placeholder — visible tile with icon */
+[data-lk-theme="boom"] .lk-participant-placeholder {
+  background-color: rgb(40, 40, 40);
+}
+
+[data-lk-theme="boom"] .lk-participant-placeholder svg {
+  opacity: 0.3;
 }
 
 /* Focus layout sidebar border */
@@ -83,23 +131,3 @@
   gap: 6px;
 }
 
-/* Chat input */
-[data-lk-theme="boom"] .lk-chat-form-input {
-  background: rgb(40, 40, 40);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgb(231, 231, 231);
-}
-
-[data-lk-theme="boom"] .lk-chat-form-input::placeholder {
-  color: rgb(150, 150, 150);
-}
-
-/* Chat send button */
-[data-lk-theme="boom"] .lk-chat-form-button {
-  background: #10c2ee;
-  color: #fff;
-}
-
-[data-lk-theme="boom"] .lk-chat-form-button:hover {
-  background: #2ecdf2;
-}
