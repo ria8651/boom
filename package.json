@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "tsx server/index.ts",
+    "dev:server": "tsx --env-file=.env.local server/index.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "start": "tsx server/index.ts"

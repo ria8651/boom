@@ -70,18 +70,23 @@ const styles = {
 
 interface PreJoinPageProps {
   onJoin: (details: ConnectionDetails) => void;
+  error: string;
+  onError: (message: string) => void;
 }
 
-export default function PreJoinPage({ onJoin }: PreJoinPageProps) {
-  const [displayName, setDisplayName] = useState("");
-  const [room, setRoom] = useState("");
+export default function PreJoinPage({ onJoin, error, onError }: PreJoinPageProps) {
+  const [displayName, setDisplayName] = useState(
+    () => localStorage.getItem("boom:displayName") ?? "",
+  );
+  const [room, setRoom] = useState(
+    () => localStorage.getItem("boom:room") ?? "",
+  );
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    onError("");
     setLoading(true);
 
     try {
@@ -96,15 +101,29 @@ export default function PreJoinPage({ onJoin }: PreJoinPageProps) {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || "Failed to join");
+        const data = await res.json().catch(() => null);
+        if (res.status === 401) {
+          onError("Incorrect password. Please try again.");
+        } else if (res.status === 400) {
+          onError(data?.error ?? "Missing required fields.");
+        } else {
+          onError(
+            `Server error (${res.status}): ${data?.error ?? res.statusText}. ` +
+            "Try again or check the server logs.",
+          );
+        }
         return;
       }
 
       const { token, serverUrl } = await res.json();
+      localStorage.setItem("boom:displayName", displayName);
+      localStorage.setItem("boom:room", room);
       onJoin({ serverUrl, token, password });
-    } catch {
-      setError("Could not connect to server");
+    } catch (err) {
+      onError(
+        "Could not reach the server. " +
+        `Check your network connection and that the server is running. (${err instanceof Error ? err.message : String(err)})`,
+      );
     } finally {
       setLoading(false);
     }
