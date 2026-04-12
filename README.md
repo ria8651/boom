@@ -10,14 +10,15 @@ Video conferencing with end-to-end encryption, powered by LiveKit.
 
 ## Features
 
-- Video grid with adaptive tile layout (maximises tile size for any participant count)
-- Focus mode — click to expand any tile, others move to a sidebar strip
+- Aspect-aware tile packing — each tile sized to its stream's native aspect ratio, packed tightly with no grid
+- Pin mode — pin tiles to split the view with a resizable divider, both halves independently packed
+- Fullscreen video — click to watch a single stream in native fullscreen (Escape to exit)
 - Screen sharing with native aspect ratio preserved
-- Chat panel with unread message badge
+- Chat panel with unread message badge, multi-line input, resizable sidebar
 - Camera and microphone device switching
 - End-to-end encryption (password-based shared key)
-- Session persistence across page refreshes
-- Mobile responsive (icon-only controls, fullscreen chat overlay, touch targets)
+- Session persistence across page refreshes (auto-reconnect with fresh token)
+- Mobile responsive (container queries for icon-only controls, fullscreen chat overlay)
 - Accessible error handling (inline banners, device permission states on buttons)
 
 ## Setup
@@ -101,5 +102,5 @@ Users enter a display name, room name, and password. The server validates the pa
 - **Noise cancellation** — Krisp noise cancellation via LiveKit's audio processor
 - **Whiteboard** — shared canvas via data channels (tldraw/excalidraw integration)
 - **Participant list with roles** — metadata-driven role display + moderation controls
-- **Picture-in-picture** — Browser PiP API for the focused video track
+- **Picture-in-picture** — Browser PiP API for video tracks
 - **Room list / lobby** — browse and join active rooms

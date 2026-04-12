@@ -130,7 +130,7 @@ export default function PreJoinPage({ onJoin, error, onError }: PreJoinPageProps
       const { token, serverUrl } = await res.json();
       localStorage.setItem("boom:displayName", displayName);
       localStorage.setItem("boom:room", room);
-      onJoin({ serverUrl, token, password });
+      onJoin({ serverUrl, token, password, room, identity: displayName });
     } catch (err) {
       onError(
         "Could not reach the server. " +

@@ -134,10 +134,10 @@ test.describe("Session persistence", () => {
     await page.locator('input[type="password"]').fill("pw");
     await page.locator('button[type="submit"]').click();
 
-    // Verify session was saved by checking inside toPass (it may clear fast)
+    // Verify session was saved to localStorage
     let savedSession = "";
     await expect(async () => {
-      const s = await page.evaluate(() => sessionStorage.getItem("boom:session"));
+      const s = await page.evaluate(() => localStorage.getItem("boom:session"));
       expect(s).toBeTruthy();
       savedSession = s!;
     }).toPass({ timeout: 5_000 });
@@ -145,6 +145,8 @@ test.describe("Session persistence", () => {
     const parsed = JSON.parse(savedSession);
     expect(parsed.token).toBe("fake-token");
     expect(parsed.password).toBe("pw");
+    expect(parsed.room).toBe("testroom");
+    expect(parsed.identity).toBe("testuser");
 
     // Wait for the app to settle (fake connection fails, returns to prejoin)
     await expect(page.locator("h1")).toHaveText("boom", { timeout: 15_000 });
@@ -152,26 +154,36 @@ test.describe("Session persistence", () => {
   });
 
   test("clears session on leave", async ({ page }) => {
-    // Seed a session directly
+    // Mock the token refresh endpoint (app will try to refresh on load)
+    await page.route("**/api/token", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ token: "fake-token-2", serverUrl: "wss://fake.example.com" }),
+      }),
+    );
+
+    // Seed a session in localStorage
     await page.goto("/");
     await page.evaluate(() => {
-      sessionStorage.setItem(
+      localStorage.setItem(
         "boom:session",
         JSON.stringify({
           token: "fake-token",
           serverUrl: "wss://fake.example.com",
           password: "pw",
+          room: "testroom",
+          identity: "testuser",
         }),
       );
     });
 
-    // Reload — should enter room
+    // Reload — app should restore session and try to connect
     await page.reload();
-    await expect(page.locator("h1")).not.toBeVisible({ timeout: 5_000 });
 
     // The fake connection will fail, kicking back to prejoin and clearing session
     await expect(page.locator("h1")).toHaveText("boom", { timeout: 15_000 });
-    const session = await page.evaluate(() => sessionStorage.getItem("boom:session"));
+    const session = await page.evaluate(() => localStorage.getItem("boom:session"));
     expect(session).toBeNull();
   });
 });

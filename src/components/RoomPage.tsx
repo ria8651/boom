@@ -53,21 +53,19 @@ function RoomInterior({
     if (chatOpen) setUnreadChat(0);
   }, [chatOpen]);
 
-  // Measure grid area synchronously after DOM updates (before paint)
+  // Measure grid area — useLayoutEffect for synchronous reads on state
+  // changes (chat open, error), ResizeObserver for window resizes
   useLayoutEffect(() => {
     const el = contentRef.current;
-    if (el) {
-      setGridSize({ width: el.clientWidth, height: el.clientHeight });
-    }
-  }, [chatOpen]);
+    if (el) setGridSize({ width: el.clientWidth, height: el.clientHeight });
+  }, [chatOpen, roomError]);
 
-  // Also track resizes
   useEffect(() => {
     const el = contentRef.current;
     if (!el) return;
-    const observer = new ResizeObserver(() => {
-      setGridSize({ width: el.clientWidth, height: el.clientHeight });
-    });
+    const measure = () => setGridSize({ width: el.clientWidth, height: el.clientHeight });
+    measure(); // initial measurement
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -76,8 +74,10 @@ function RoomInterior({
     <>
       <div className="room">
         <div className="room-main">
-          <div className="room-content" ref={contentRef}>
-            <VideoGrid containerWidth={gridSize.width} containerHeight={gridSize.height} />
+          <div className="room-content">
+            <div className="grid-area" ref={contentRef}>
+              <VideoGrid containerWidth={gridSize.width} containerHeight={gridSize.height} />
+            </div>
             <div className="room-bottom">
               {roomError && <ErrorBanner message={roomError} onDismiss={() => setRoomError("")} />}
               <ControlBar
@@ -87,7 +87,7 @@ function RoomInterior({
               />
             </div>
           </div>
-          {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
+          {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} onError={setRoomError} />}
         </div>
       </div>
       <RoomAudioRenderer />
@@ -130,12 +130,12 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
           "The room has been closed by the server.",
         [DisconnectReason.JOIN_FAILURE]:
           `Could not connect to the LiveKit server at ${connectionDetails.serverUrl}. ` +
-          "This usually means the server is unreachable, the API key/secret is wrong, or the URL is incorrect. " +
-          "Check the LiveKit server logs for details.",
+          "This usually means the server is unreachable, the API key/secret is wrong, the URL is incorrect, " +
+          "or you're connecting over HTTP instead of HTTPS (required for WebRTC).",
       };
       onLeave(
         messages[reason as DisconnectReason] ??
-          `Lost connection to the room (reason: ${reason ?? "unknown"}). Check your network and try again.`,
+          `Lost connection to the room (reason: ${reason ?? "unknown"}). Check your network connection and ensure you're using HTTPS.`,
       );
     },
     [onLeave, connectionDetails.serverUrl],
