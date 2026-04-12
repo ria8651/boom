@@ -73,7 +73,7 @@ const styles = {
     borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
   } as const,
   brandingLogo: {
-    height: "4rem",
+    height: "3rem",
     opacity: 0.2,
     filter: "invert(1)",
     display: "block",
