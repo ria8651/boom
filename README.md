@@ -2,6 +2,12 @@
 
 Video conferencing with end-to-end encryption, powered by LiveKit.
 
+![Join screen](docs/prejoin.png)
+
+![In a room](docs/live-room.png)
+
+![Chat](docs/live-chat.png)
+
 ## Setup
 
 ### Environment

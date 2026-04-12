@@ -23,9 +23,7 @@ const styles = {
   subtitle: {
     fontSize: "0.875rem",
     color: "rgb(150, 150, 150)",
-    margin: "0 0 1.5rem 0",
-    paddingBottom: "1rem",
-    borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+    margin: 0,
   } as const,
   form: {
     display: "flex",
@@ -65,6 +63,20 @@ const styles = {
     color: "#f91f31",
     fontSize: "0.875rem",
     margin: 0,
+  } as const,
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "1.5rem",
+    paddingBottom: "1.5rem",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+  } as const,
+  brandingLogo: {
+    height: "4rem",
+    opacity: 0.2,
+    filter: "invert(1)",
+    display: "block",
   } as const,
 };
 
@@ -132,8 +144,19 @@ export default function PreJoinPage({ onJoin, error, onError }: PreJoinPageProps
   return (
     <div style={styles.wrapper}>
       <div style={styles.card}>
-        <h1 style={styles.title}>boom</h1>
-        <p style={styles.subtitle}>video conferencing</p>
+        <div style={styles.header}>
+          <div>
+            <h1 style={styles.title}>boom</h1>
+            <p style={styles.subtitle}>video conferencing</p>
+          </div>
+          <a
+            href="https://bink.eu.org"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img src="/banner-flat.svg" alt="Bink Studios" style={styles.brandingLogo} />
+          </a>
+        </div>
         <form style={styles.form} onSubmit={handleSubmit}>
           <label style={styles.label}>
             Display name
