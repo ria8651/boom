@@ -1,10 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-import "@livekit/components-styles";
-import "./theme/fonts.css";
-import "./theme/boom-theme.css";
 import "./App.css";
+import "./styles/room.css";
 
 import App from "./App";
 

@@ -18,10 +18,9 @@ test.describe("Live room join", () => {
     // Should leave prejoin
     await expect(page.locator("h1")).not.toBeVisible({ timeout: 15_000 });
 
-    // Wait for the room to fully connect
-    const controlBar = page.locator(".lk-control-bar");
+    // Wait for the room to fully connect — control bar appears
+    const controlBar = page.locator(".control-bar");
     await expect(controlBar).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Connecting")).not.toBeVisible({ timeout: 10_000 });
 
     // Wait for participant tiles to render
     await page.waitForTimeout(1_000);
@@ -34,10 +33,10 @@ test.describe("Live room join", () => {
     // Open chat panel
     const chatButton = page.locator("button").filter({ hasText: "Chat" });
     await chatButton.click();
-    await expect(page.locator(".lk-chat")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator(".chat-panel")).toBeVisible({ timeout: 5_000 });
 
     // Send a test message
-    const chatInput = page.locator(".lk-chat-form-input");
+    const chatInput = page.locator(".chat-input");
     await chatInput.fill("Hello from Playwright!");
     await chatInput.press("Enter");
     await page.waitForTimeout(500);
@@ -48,11 +47,10 @@ test.describe("Live room join", () => {
     });
 
     // Close chat
-    const closeChat = page.locator(".lk-chat-header .lk-close-button");
-    await closeChat.click();
+    await page.locator(".chat-close").click();
 
     // Leave
-    const leaveButton = page.locator(".lk-disconnect-button");
+    const leaveButton = page.locator(".control-btn--danger");
     await expect(leaveButton).toBeVisible();
     await leaveButton.click();
     await expect(page.locator("h1")).toHaveText("boom", { timeout: 5_000 });

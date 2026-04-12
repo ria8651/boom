@@ -8,13 +8,25 @@ Video conferencing with end-to-end encryption, powered by LiveKit.
 
 ![Chat](docs/live-chat.png)
 
+## Features
+
+- Video grid with adaptive tile layout (maximises tile size for any participant count)
+- Focus mode — click to expand any tile, others move to a sidebar strip
+- Screen sharing with native aspect ratio preserved
+- Chat panel with unread message badge
+- Camera and microphone device switching
+- End-to-end encryption (password-based shared key)
+- Session persistence across page refreshes
+- Mobile responsive (icon-only controls, fullscreen chat overlay, touch targets)
+- Accessible error handling (inline banners, device permission states on buttons)
+
 ## Setup
 
 ### Environment
 
 Copy `.env.example` to `.env.local` and fill in your values:
 
-```
+```bash
 LIVEKIT_API_KEY=...        # From your LiveKit server config
 LIVEKIT_API_SECRET=...     # From your LiveKit server config
 LIVEKIT_URL=wss://...      # Your LiveKit server WebSocket URL
@@ -89,6 +101,5 @@ Users enter a display name, room name, and password. The server validates the pa
 - **Noise cancellation** — Krisp noise cancellation via LiveKit's audio processor
 - **Whiteboard** — shared canvas via data channels (tldraw/excalidraw integration)
 - **Participant list with roles** — metadata-driven role display + moderation controls
-- **Mobile responsive layout** — responsive grid breakpoints, touch-friendly controls
 - **Picture-in-picture** — Browser PiP API for the focused video track
 - **Room list / lobby** — browse and join active rooms

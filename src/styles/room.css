@@ -1,0 +1,580 @@
+/* ── Room layout ─────────────────────────────────────────────── */
+
+.room {
+  --room-pad: 1rem;
+  --room-gap: 8px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: rgb(34, 34, 34);
+}
+
+.room-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.room-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.room-bottom {
+  flex-shrink: 0;
+}
+
+/* ── Inset line utility ──────────────────────────────────────── */
+/* Lines that don't touch the edges — inset by the parent padding */
+
+.line-top,
+.line-bottom,
+.line-left {
+  position: relative;
+}
+
+.line-top::before,
+.line-bottom::after {
+  content: "";
+  position: absolute;
+  left: var(--room-pad);
+  right: var(--room-pad);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.line-top::before {
+  top: 0;
+}
+
+.line-bottom::after {
+  bottom: 0;
+}
+
+.line-left::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: var(--room-pad);
+  bottom: var(--room-pad);
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Video grid ──────────────────────────────────────────────── */
+
+.video-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--grid-cols, 1), var(--tile-w, 1fr));
+  grid-auto-rows: var(--tile-h, auto);
+  gap: var(--room-gap);
+  padding: var(--room-pad);
+  align-content: center;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.participant-tile {
+  position: relative;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgb(40, 40, 40);
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.participant-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.participant-tile--screenshare video {
+  object-fit: contain;
+  background: rgb(30, 30, 30);
+}
+
+.participant-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.participant-placeholder svg {
+  width: 40%;
+  height: 40%;
+}
+
+.participant-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: var(--tile-w, 100%);
+}
+
+.participant-info {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0;
+  font-size: 0.8125rem;
+  color: rgb(150, 150, 150);
+}
+
+.participant-info .muted-icon {
+  opacity: 0.5;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* ── Focus button on tiles ────────────────────────────────────── */
+
+.focus-btn {
+  position: absolute;
+  bottom: 0.375rem;
+  right: 0.375rem;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 3px;
+  color: rgb(200, 200, 200);
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.participant-tile:hover .focus-btn {
+  opacity: 1;
+}
+
+.focus-btn:hover {
+  color: #fff;
+}
+
+/* ── Focus layout (one big + sidebar strip) ──────────────────── */
+
+.focus-layout {
+  flex: 1;
+  display: flex;
+  gap: var(--room-gap);
+  padding: var(--room-pad);
+  min-height: 0;
+}
+
+.focus-layout--row {
+  flex-direction: row;
+}
+
+.focus-layout--column {
+  flex-direction: column;
+  gap: var(--room-gap);
+}
+
+.focus-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+}
+
+.focus-main .participant-wrapper {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.focus-main .participant-tile {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: auto;
+}
+
+/* Sidebar beside (row direction) */
+.focus-layout--row .focus-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--room-gap);
+  width: 200px;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.focus-layout--row .focus-sidebar .participant-wrapper {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+/* Sidebar below (column direction) */
+.focus-layout--column .focus-sidebar {
+  display: flex;
+  flex-direction: row;
+  gap: var(--room-gap);
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  justify-content: center;
+}
+
+.focus-layout--column .focus-sidebar .participant-wrapper {
+  width: auto;
+  flex-shrink: 0;
+}
+
+.focus-layout--column .focus-sidebar .participant-tile {
+  height: 120px;
+  width: auto;
+}
+
+/* ── Control bar ─────────────────────────────────────────────── */
+
+.control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: var(--room-pad);
+  flex-shrink: 0;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+}
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 44px;
+  background: rgb(44, 44, 44);
+  color: rgb(231, 231, 231);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  font-family: "Open Sans", system-ui, sans-serif;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.control-btn:hover {
+  background: rgb(55, 55, 55);
+}
+
+.control-btn--muted {
+  color: rgb(150, 150, 150);
+}
+
+.control-btn--active {
+  background: rgb(55, 55, 55);
+}
+
+.control-btn--pending {
+  color: rgb(150, 150, 150);
+  cursor: wait;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+.control-btn--error {
+  border-color: #f91f31;
+  color: #f91f31;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.control-btn--error:hover {
+  background: rgb(44, 44, 44);
+}
+
+.control-btn--sharing {
+  background: rgba(16, 194, 238, 0.15);
+  border-color: #10c2ee;
+  color: #10c2ee;
+}
+
+.control-btn--sharing:hover {
+  background: rgba(16, 194, 238, 0.25);
+}
+
+.control-btn--danger {
+  background: transparent;
+  border-color: #f91f31;
+  color: #f91f31;
+}
+
+.control-btn--danger:hover {
+  background: rgba(249, 31, 49, 0.1);
+}
+
+/* Chat button badge */
+.control-btn--chat {
+  position: relative;
+}
+
+.chat-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: #10c2ee;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+/* Group button with device select (no gap between them) */
+.control-group .control-btn:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+
+.device-select {
+  padding: 0.5rem 0.5rem;
+  min-height: 44px;
+  background: rgb(44, 44, 44);
+  color: rgb(231, 231, 231);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0 4px 4px 0;
+  font-family: "Open Sans", system-ui, sans-serif;
+  font-size: 0.75rem;
+  cursor: pointer;
+  max-width: 10rem;
+  text-overflow: ellipsis;
+}
+
+.device-select:hover {
+  background: rgb(55, 55, 55);
+}
+
+/* ── Chat panel ──────────────────────────────────────────────── */
+
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  width: clamp(260px, 30vw, 360px);
+  background: rgb(34, 34, 34);
+  flex-shrink: 0;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--room-pad);
+  font-family: "Chivo", sans-serif;
+  font-size: 0.875rem;
+  color: rgb(231, 231, 231);
+  flex-shrink: 0;
+}
+
+.chat-header .chat-close {
+  position: absolute;
+  right: var(--room-pad);
+}
+
+.chat-close {
+  background: none;
+  border: none;
+  color: rgb(150, 150, 150);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+}
+
+.chat-close:hover {
+  color: rgb(231, 231, 231);
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem var(--room-pad);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 0;
+}
+
+.chat-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0 0.25rem;
+}
+
+.chat-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: rgb(150, 150, 150);
+  padding-top: 0.5rem;
+}
+
+.chat-bubble {
+  display: inline-block;
+  border-radius: 12px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  word-break: break-word;
+  width: fit-content;
+  max-width: 85%;
+}
+
+.chat-bubble--local {
+  background: rgb(50, 50, 50);
+  color: rgb(231, 231, 231);
+}
+
+.chat-bubble--remote {
+  background: rgba(16, 194, 238, 0.15);
+  color: rgb(231, 231, 231);
+}
+
+.chat-form {
+  display: flex;
+  gap: 0.5rem;
+  padding: var(--room-pad);
+  flex-shrink: 0;
+}
+
+.chat-input {
+  flex: 1;
+  background: rgb(40, 40, 40);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  color: rgb(231, 231, 231);
+  font-size: 0.875rem;
+  font-family: "Open Sans", system-ui, sans-serif;
+  outline: none;
+}
+
+.chat-input::placeholder {
+  color: rgb(150, 150, 150);
+}
+
+.chat-send {
+  background: #10c2ee;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.chat-send:hover {
+  background: #2ecdf2;
+}
+
+.chat-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Error banner ────────────────────────────────────────────── */
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem var(--room-pad);
+  color: #f91f31;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.error-banner-text {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.error-banner button {
+  background: none;
+  border: none;
+  color: rgb(150, 150, 150);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Mobile ──────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .video-grid {
+    gap: var(--room-gap);
+    padding: 4px;
+  }
+
+  .control-bar {
+    gap: 0.25rem;
+    padding: 0.5rem;
+  }
+
+  .control-btn {
+    padding: 0.5rem;
+  }
+
+  .control-btn .btn-label {
+    display: none;
+  }
+
+  .device-select {
+    appearance: none;
+    max-width: 2rem;
+    padding: 0.5rem 0.25rem;
+    text-indent: -9999px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  .chat-panel {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    z-index: 100;
+  }
+
+  .participant-tile--screenshare video {
+    object-fit: contain;
+  }
+
+  .line-top::before,
+  .line-bottom::after {
+    left: 0.5rem;
+    right: 0.5rem;
+  }
+}

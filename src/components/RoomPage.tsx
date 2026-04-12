@@ -1,13 +1,16 @@
-import { LiveKitRoom, VideoConference } from "@livekit/components-react";
+import { LiveKitRoom, RoomAudioRenderer, useChat } from "@livekit/components-react";
 import {
   DisconnectReason,
   ExternalE2EEKeyProvider,
   MediaDeviceFailure,
   type RoomOptions,
 } from "livekit-client";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ConnectionDetails } from "../types/connection";
 import ErrorBanner from "./ErrorBanner";
+import VideoGrid from "./VideoGrid";
+import ControlBar from "./ControlBar";
+import ChatPanel from "./ChatPanel";
 
 interface RoomPageProps {
   connectionDetails: ConnectionDetails;
@@ -21,9 +24,81 @@ const worker =
       })
     : undefined;
 
+function RoomInterior({
+  chatOpen,
+  setChatOpen,
+  roomError,
+  setRoomError,
+}: {
+  chatOpen: boolean;
+  setChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  roomError: string;
+  setRoomError: (msg: string) => void;
+}) {
+  const { chatMessages } = useChat();
+  const [unreadChat, setUnreadChat] = useState(0);
+  const prevCountRef = useRef(chatMessages.length);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const newMessages = chatMessages.length - prevCountRef.current;
+    if (newMessages > 0 && !chatOpen) {
+      setUnreadChat((c) => c + newMessages);
+    }
+    prevCountRef.current = chatMessages.length;
+  }, [chatMessages.length, chatOpen]);
+
+  useEffect(() => {
+    if (chatOpen) setUnreadChat(0);
+  }, [chatOpen]);
+
+  // Measure grid area synchronously after DOM updates (before paint)
+  useLayoutEffect(() => {
+    const el = contentRef.current;
+    if (el) {
+      setGridSize({ width: el.clientWidth, height: el.clientHeight });
+    }
+  }, [chatOpen]);
+
+  // Also track resizes
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      setGridSize({ width: el.clientWidth, height: el.clientHeight });
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <>
+      <div className="room">
+        <div className="room-main">
+          <div className="room-content" ref={contentRef}>
+            <VideoGrid containerWidth={gridSize.width} containerHeight={gridSize.height} />
+            <div className="room-bottom">
+              {roomError && <ErrorBanner message={roomError} onDismiss={() => setRoomError("")} />}
+              <ControlBar
+                chatOpen={chatOpen}
+                onToggleChat={() => setChatOpen((c) => !c)}
+                unreadChat={unreadChat}
+              />
+            </div>
+          </div>
+          {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} />}
+        </div>
+      </div>
+      <RoomAudioRenderer />
+    </>
+  );
+}
+
 export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) {
   const [keyProvider] = useState(() => new ExternalE2EEKeyProvider());
   const [roomError, setRoomError] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
 
   useMemo(() => {
     keyProvider.setKey(connectionDetails.password);
@@ -109,8 +184,12 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
       options={roomOptions}
       style={{ height: "100%" }}
     >
-      {roomError && <ErrorBanner message={roomError} onDismiss={() => setRoomError("")} />}
-      <VideoConference />
+      <RoomInterior
+        chatOpen={chatOpen}
+        setChatOpen={setChatOpen}
+        roomError={roomError}
+        setRoomError={setRoomError}
+      />
     </LiveKitRoom>
   );
 }

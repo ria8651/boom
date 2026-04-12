@@ -41,7 +41,7 @@ function App() {
   }, []);
 
   return (
-    <div data-lk-theme="boom" style={{ height: "100%" }}>
+    <div style={{ height: "100%" }}>
       {connectionDetails ? (
         <RoomPage
           connectionDetails={connectionDetails}
