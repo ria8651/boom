@@ -1,0 +1,105 @@
+[data-lk-theme="boom"] {
+  color-scheme: dark;
+
+  /* Backgrounds — bink.eu.org palette */
+  --lk-bg: rgb(34, 34, 34);
+  --lk-bg2: rgb(40, 40, 40);
+  --lk-bg3: rgb(50, 50, 50);
+  --lk-bg4: rgb(60, 60, 60);
+  --lk-bg5: rgb(70, 70, 70);
+
+  /* Foreground */
+  --lk-fg: rgb(231, 231, 231);
+  --lk-fg2: rgb(210, 210, 210);
+  --lk-fg3: rgb(190, 190, 190);
+  --lk-fg4: rgb(170, 170, 170);
+  --lk-fg5: rgb(150, 150, 150);
+
+  /* Thin borders */
+  --lk-border-color: rgba(255, 255, 255, 0.08);
+
+  /* Accent — cyan */
+  --lk-accent-fg: #fff;
+  --lk-accent-bg: #10c2ee;
+  --lk-accent2: #2ecdf2;
+  --lk-accent3: #4cd8f5;
+  --lk-accent4: #6ae3f8;
+
+  /* Danger */
+  --lk-danger-fg: #fff;
+  --lk-danger: #f91f31;
+
+  /* Controls */
+  --lk-control-fg: var(--lk-fg);
+  --lk-control-bg: rgb(44, 44, 44);
+  --lk-control-hover-bg: rgb(55, 55, 55);
+  --lk-control-active-bg: rgb(65, 65, 65);
+  --lk-control-active-hover-bg: rgb(75, 75, 75);
+
+  /* Typography */
+  --lk-font-family: "Open Sans", system-ui, sans-serif;
+  --lk-font-size: 15px;
+  --lk-line-height: 1.5;
+
+  /* Geometry — clean, minimal */
+  --lk-border-radius: 4px;
+  --lk-box-shadow: none;
+  --lk-drop-shadow: none;
+  --lk-grid-gap: 6px;
+}
+
+/* Headings in Chivo */
+[data-lk-theme="boom"] .lk-chat-header,
+[data-lk-theme="boom"] .lk-prejoin h2,
+[data-lk-theme="boom"] h1,
+[data-lk-theme="boom"] h2,
+[data-lk-theme="boom"] h3 {
+  font-family: "Chivo", sans-serif;
+}
+
+/* Remove shadows from device menus and popups */
+[data-lk-theme="boom"] .lk-device-menu {
+  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Chat panel border */
+[data-lk-theme="boom"] .lk-chat {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Control bar — integrated feel */
+[data-lk-theme="boom"] .lk-control-bar {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Participant tiles — subtle border */
+[data-lk-theme="boom"] .lk-participant-tile {
+  border-radius: 4px;
+}
+
+/* Focus layout sidebar border */
+[data-lk-theme="boom"] .lk-focus-layout {
+  gap: 6px;
+}
+
+/* Chat input */
+[data-lk-theme="boom"] .lk-chat-form-input {
+  background: rgb(40, 40, 40);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgb(231, 231, 231);
+}
+
+[data-lk-theme="boom"] .lk-chat-form-input::placeholder {
+  color: rgb(150, 150, 150);
+}
+
+/* Chat send button */
+[data-lk-theme="boom"] .lk-chat-form-button {
+  background: #10c2ee;
+  color: #fff;
+}
+
+[data-lk-theme="boom"] .lk-chat-form-button:hover {
+  background: #2ecdf2;
+}
