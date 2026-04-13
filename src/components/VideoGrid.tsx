@@ -1,4 +1,4 @@
-import { useTracks, VideoTrack, isTrackReference } from "@livekit/components-react";
+import { useTracks, VideoTrack, isTrackReference, useIsSpeaking, useTrackVolume } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import type { TrackReferenceOrPlaceholder } from "@livekit/components-core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -361,6 +361,12 @@ function Tile({ trackRef, isFocused, onFocus, style }: {
   const hasVideo = trackRef.publication?.track && !trackRef.publication.isMuted;
   const isMicMuted =
     trackRef.participant?.getTrackPublication(Track.Source.Microphone)?.isMuted ?? true;
+  const isSpeaking = useIsSpeaking(trackRef.participant);
+  const screenShareAudioTrack = isScreenShare
+    ? trackRef.participant?.getTrackPublication(Track.Source.ScreenShareAudio)?.track
+    : undefined;
+  const screenShareVolume = useTrackVolume(screenShareAudioTrack as never);
+  const hasAudioActivity = isScreenShare ? screenShareVolume > 0.01 : isSpeaking;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const tileRef = useRef<HTMLDivElement>(null);
 
@@ -385,7 +391,7 @@ function Tile({ trackRef, isFocused, onFocus, style }: {
     <div className="participant-wrapper" style={style}>
       <div
         ref={tileRef}
-        className={`participant-tile${isScreenShare ? " participant-tile--screenshare" : ""}`}
+        className={`participant-tile${isScreenShare ? " participant-tile--screenshare" : ""}${hasAudioActivity ? " participant-tile--speaking" : ""}`}
       >
         {hasVideo && isTrackReference(trackRef) ? (
           <VideoTrack trackRef={trackRef} />

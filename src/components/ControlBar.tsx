@@ -15,7 +15,7 @@ interface ControlBarProps {
 export default function ControlBar({ chatOpen, onToggleChat, unreadChat }: ControlBarProps) {
   const mic = useTrackToggle({ source: Track.Source.Microphone });
   const cam = useTrackToggle({ source: Track.Source.Camera });
-  const screen = useTrackToggle({ source: Track.Source.ScreenShare });
+  const screen = useTrackToggle({ source: Track.Source.ScreenShare, captureOptions: { audio: true } });
   const disconnect = useDisconnectButton({});
   const { lastMicrophoneError, lastCameraError } = useLocalParticipant();
 
