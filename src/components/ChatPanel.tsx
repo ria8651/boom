@@ -1,12 +1,36 @@
-import { useChat } from "@livekit/components-react";
+import { useChat, type ReceivedChatMessage } from "@livekit/components-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-interface ChatPanelProps {
-  onClose: () => void;
-  onError: (message: string) => void;
+type MergedItem =
+  | { type: "chat"; msg: ReceivedChatMessage; ts: number }
+  | { type: "system"; id: string; text: string; ts: number };
+
+function mergedMessages(
+  chat: ReceivedChatMessage[],
+  system: { id: string; text: string; timestamp: number }[],
+): MergedItem[] {
+  const items: MergedItem[] = [
+    ...chat.map((msg) => ({ type: "chat" as const, msg, ts: msg.timestamp ?? 0 })),
+    ...system.map((s) => ({ type: "system" as const, id: s.id, text: s.text, ts: s.timestamp })),
+  ];
+  items.sort((a, b) => a.ts - b.ts);
+  return items;
 }
 
-export default function ChatPanel({ onClose, onError }: ChatPanelProps) {
+interface SystemMessage {
+  id: string;
+  text: string;
+  timestamp: number;
+}
+
+interface ChatPanelProps {
+  open: boolean;
+  onClose: () => void;
+  onError: (message: string) => void;
+  systemMessages: SystemMessage[];
+}
+
+export default function ChatPanel({ open, onClose, onError, systemMessages }: ChatPanelProps) {
   const { chatMessages, send, isSending } = useChat();
   const [draft, setDraft] = useState("");
   const [sendError, setSendError] = useState("");
@@ -51,7 +75,7 @@ export default function ChatPanel({ onClose, onError }: ChatPanelProps) {
     const startWidth = panel.offsetWidth;
     const onMove = (ev: MouseEvent) => {
       const newWidth = startWidth + (startX - ev.clientX);
-      panel.style.width = `${Math.max(200, Math.min(newWidth, window.innerWidth * 0.5))}px`;
+      panel.style.width = `${Math.max(260, Math.min(newWidth, window.innerWidth * 0.75))}px`;
     };
     const onUp = () => {
       document.removeEventListener("mousemove", onMove);
@@ -62,7 +86,7 @@ export default function ChatPanel({ onClose, onError }: ChatPanelProps) {
   }, []);
 
   return (
-    <div className="chat-panel" ref={panelRef}>
+    <div className={`chat-panel${open ? "" : " chat-panel--hidden"}`} ref={panelRef}>
       <div className="chat-drag-handle focus-divider focus-divider--vertical" onMouseDown={handleDrag} />
       <div className="chat-header">
         <span>Chat</span>
@@ -72,28 +96,34 @@ export default function ChatPanel({ onClose, onError }: ChatPanelProps) {
       </div>
 
       <div className="chat-messages">
-        {chatMessages.map((msg) => (
-          <div key={msg.id} className="chat-entry">
-            <div className="chat-meta">
-              <span>{msg.from?.name || msg.from?.identity || "Unknown"}</span>
-              <span>
-                {msg.timestamp
-                  ? new Date(msg.timestamp).toLocaleTimeString([], {
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })
-                  : ""}
-              </span>
+        {mergedMessages(chatMessages, systemMessages).map((item) =>
+          item.type === "system" ? (
+            <div key={item.id} className="chat-system">
+              {item.text}
             </div>
-            <div
-              className={`chat-bubble ${
-                msg.from?.isLocal ? "chat-bubble--local" : "chat-bubble--remote"
-              }`}
-            >
-              {msg.message}
+          ) : (
+            <div key={item.msg.id} className="chat-entry">
+              <div className="chat-meta">
+                <span>{item.msg.from?.name || item.msg.from?.identity || "Unknown"}</span>
+                <span>
+                  {item.msg.timestamp
+                    ? new Date(item.msg.timestamp).toLocaleTimeString([], {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })
+                    : ""}
+                </span>
+              </div>
+              <div
+                className={`chat-bubble ${
+                  item.msg.from?.isLocal ? "chat-bubble--local" : "chat-bubble--remote"
+                }`}
+              >
+                {item.msg.message}
+              </div>
             </div>
-          </div>
-        ))}
+          ),
+        )}
         <div ref={messagesEndRef} />
       </div>
 

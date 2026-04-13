@@ -5,6 +5,7 @@ import {
   useLocalParticipant,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
+import { useEffect, useRef, useState } from "react";
 
 interface ControlBarProps {
   chatOpen: boolean;
@@ -25,8 +26,33 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat }: Contr
   const micError = lastMicrophoneError != null;
   const camError = lastCameraError != null;
 
+  // Auto-collapse labels when buttons would overflow
+  const barRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const check = () => {
+      // Temporarily show full labels to measure natural width
+      const wasCompact = el.classList.contains("control-bar--compact");
+      if (wasCompact) el.classList.remove("control-bar--compact");
+      const fullWidth = el.scrollWidth;
+      const available = el.clientWidth;
+      if (wasCompact) el.classList.add("control-bar--compact");
+      setCompact(fullWidth > available + 1);
+    };
+    check();
+    // Re-check on resize and on DOM changes (button text/count changes)
+    const resizeObs = new ResizeObserver(check);
+    resizeObs.observe(el);
+    const mutationObs = new MutationObserver(check);
+    mutationObs.observe(el, { childList: true, subtree: true, characterData: true });
+    return () => { resizeObs.disconnect(); mutationObs.disconnect(); };
+  }, []);
+
   return (
-    <div className="control-bar line-top">
+    <div ref={barRef} className={`control-bar line-top${compact ? " control-bar--compact" : ""}`}>
       {/* Microphone */}
       <MediaButton
         toggle={mic}

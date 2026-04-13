@@ -317,7 +317,7 @@ video:fullscreen {
   gap: 0.5rem;
   padding: var(--room-pad);
   flex-shrink: 0;
-  container-type: inline-size;
+  overflow: hidden;
 }
 
 .control-group {
@@ -450,8 +450,8 @@ video:fullscreen {
   display: flex;
   flex-direction: column;
   width: clamp(260px, 30vw, 360px);
-  min-width: 200px;
-  max-width: 50vw;
+  min-width: 260px;
+  max-width: 75vw;
   background: rgb(34, 34, 34);
   flex-shrink: 0;
   position: relative;
@@ -463,6 +463,10 @@ video:fullscreen {
   top: var(--room-pad);
   bottom: var(--room-pad);
   z-index: 10;
+}
+
+.chat-panel--hidden {
+  display: none;
 }
 
 .chat-header {
@@ -520,6 +524,13 @@ video:fullscreen {
   padding-top: 0.5rem;
 }
 
+.chat-system {
+  text-align: center;
+  font-size: calc(var(--tile-label) * 0.38);
+  color: rgb(100, 100, 100);
+  padding: 0.25rem 0;
+}
+
 .chat-bubble {
   display: inline-block;
   border-radius: 12px;
@@ -529,16 +540,15 @@ video:fullscreen {
   white-space: pre-wrap;
   width: fit-content;
   max-width: 85%;
+  color: rgb(231, 231, 231);
 }
 
 .chat-bubble--local {
-  background: rgb(50, 50, 50);
-  color: rgb(231, 231, 231);
+  background: rgba(16, 194, 238, 0.15);
 }
 
 .chat-bubble--remote {
-  background: rgba(16, 194, 238, 0.15);
-  color: rgb(231, 231, 231);
+  background: rgb(50, 50, 50);
 }
 
 .chat-form {
@@ -555,6 +565,7 @@ video:fullscreen {
   background: rgb(40, 40, 40);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
+  min-height: 44px;
 }
 
 .chat-input-wrap:focus-within {
@@ -641,24 +652,23 @@ video:fullscreen {
 /* ── Mobile ──────────────────────────────────────────────────── */
 
 /* Hide button labels when control bar is narrow (chat open, small screen) */
-@container (max-width: 500px) {
-  .control-btn .btn-label {
-    display: none;
-  }
+/* Auto-compact: JS adds this class when buttons overflow */
+.control-bar--compact .btn-label {
+  display: none;
+}
 
-  .control-btn {
-    padding: 0.5rem;
-  }
+.control-bar--compact .control-btn {
+  padding: 0.5rem;
+}
 
-  .device-select {
-    appearance: none;
-    max-width: 2rem;
-    padding: 0.5rem 0.25rem;
-    text-indent: -9999px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: center;
-  }
+.control-bar--compact .device-select {
+  appearance: none;
+  max-width: 2rem;
+  padding: 0.5rem 0.25rem;
+  text-indent: -9999px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 @media (max-width: 640px) {
@@ -670,8 +680,15 @@ video:fullscreen {
   .chat-panel {
     position: fixed;
     inset: 0;
-    width: 100%;
+    width: 100% !important;
+    min-width: 0;
+    max-width: none;
     z-index: 100;
+    background: rgb(34, 34, 34);
+  }
+
+  .chat-drag-handle {
+    display: none;
   }
 
   .participant-tile--screenshare video {

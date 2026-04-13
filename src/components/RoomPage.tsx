@@ -1,4 +1,4 @@
-import { LiveKitRoom, RoomAudioRenderer, useChat } from "@livekit/components-react";
+import { LiveKitRoom, RoomAudioRenderer, useChat, useParticipants } from "@livekit/components-react";
 import {
   DisconnectReason,
   ExternalE2EEKeyProvider,
@@ -40,6 +40,42 @@ function RoomInterior({
   const prevCountRef = useRef(chatMessages.length);
   const contentRef = useRef<HTMLDivElement>(null);
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
+
+  // Track participant join/leave for system messages
+  const participants = useParticipants();
+  const [systemMessages, setSystemMessages] = useState<{ id: string; text: string; timestamp: number }[]>([]);
+  const prevParticipantIds = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentIds = new Set(participants.map((p) => p.identity));
+    const prevIds = prevParticipantIds.current;
+
+    // Skip the first render (initial participant list)
+    if (prevIds.size > 0) {
+      for (const id of currentIds) {
+        if (!prevIds.has(id)) {
+          const p = participants.find((pp) => pp.identity === id);
+          const name = p?.name || id;
+          setSystemMessages((prev) => [...prev, {
+            id: `join-${id}-${Date.now()}`,
+            text: `${name} joined`,
+            timestamp: Date.now(),
+          }]);
+        }
+      }
+      for (const id of prevIds) {
+        if (!currentIds.has(id)) {
+          setSystemMessages((prev) => [...prev, {
+            id: `leave-${id}-${Date.now()}`,
+            text: `${id} left`,
+            timestamp: Date.now(),
+          }]);
+        }
+      }
+    }
+
+    prevParticipantIds.current = currentIds;
+  }, [participants]);
 
   useEffect(() => {
     const newMessages = chatMessages.length - prevCountRef.current;
@@ -87,7 +123,7 @@ function RoomInterior({
               />
             </div>
           </div>
-          {chatOpen && <ChatPanel onClose={() => setChatOpen(false)} onError={setRoomError} />}
+          <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} onError={setRoomError} systemMessages={systemMessages} />
         </div>
       </div>
       <RoomAudioRenderer />
