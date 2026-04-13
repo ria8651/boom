@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { ConnectionDetails } from "./types/connection";
 import PreJoinPage from "./components/PreJoinPage";
 import RoomPage from "./components/RoomPage";
+import SimDebugPage from "./components/SimDebugPage";
+import "./styles/debug.css";
 
 const SESSION_KEY = "boom:session";
 
@@ -54,6 +56,13 @@ function App() {
   const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | null>(null);
   const [error, setError] = useState("");
   const [restoring, setRestoring] = useState(true);
+  const [, setPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   // On mount, try to restore session with a fresh token
   useEffect(() => {
@@ -81,6 +90,18 @@ function App() {
   }, []);
 
   if (restoring) return null;
+
+  // /debug route — simulation debugger
+  if (window.location.pathname === "/debug") {
+    return (
+      <SimDebugPage
+        onBack={() => {
+          window.history.pushState({}, "", "/");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }}
+      />
+    );
+  }
 
   return (
     <div style={{ height: "100%" }}>
