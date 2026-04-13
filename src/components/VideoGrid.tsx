@@ -1,4 +1,4 @@
-import { useTracks, VideoTrack, isTrackReference, useIsSpeaking, useTrackVolume } from "@livekit/components-react";
+import { useTracks, VideoTrack, isTrackReference, useTrackVolume } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import type { TrackReferenceOrPlaceholder } from "@livekit/components-core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -361,12 +361,31 @@ function Tile({ trackRef, isFocused, onFocus, style }: {
   const hasVideo = trackRef.publication?.track && !trackRef.publication.isMuted;
   const isMicMuted =
     trackRef.participant?.getTrackPublication(Track.Source.Microphone)?.isMuted ?? true;
-  const isSpeaking = useIsSpeaking(trackRef.participant);
+  const SPEAKING_THRESHOLD = 0.5;
+  const SMOOTHING_UP = 0.2;
+  const SMOOTHING_DOWN = 0.1;
+  const MAX_GLOW = 12; // max blur radius in px
+  const micTrack = !isScreenShare
+    ? trackRef.participant?.getTrackPublication(Track.Source.Microphone)?.track
+    : undefined;
   const screenShareAudioTrack = isScreenShare
     ? trackRef.participant?.getTrackPublication(Track.Source.ScreenShareAudio)?.track
     : undefined;
+  const micVolume = useTrackVolume(micTrack as never);
   const screenShareVolume = useTrackVolume(screenShareAudioTrack as never);
-  const hasAudioActivity = isScreenShare ? screenShareVolume > 0.01 : isSpeaking;
+  const rawVolume = isScreenShare ? screenShareVolume : micVolume;
+
+  // Smooth volume: fast attack, slow release, snap to zero below dead zone
+  const smoothedRef = useRef(0);
+  const smoothed = (() => {
+    const target = rawVolume > SPEAKING_THRESHOLD ? rawVolume : 0;
+    const rate = target > smoothedRef.current ? SMOOTHING_UP : SMOOTHING_DOWN;
+    smoothedRef.current += (target - smoothedRef.current) * rate;
+    if (smoothedRef.current < 0.02) smoothedRef.current = 0;
+    return smoothedRef.current;
+  })();
+
+  const audioIntensity = Math.min(1, smoothed * 2); // 0–1 range
   const [isFullscreen, setIsFullscreen] = useState(false);
   const tileRef = useRef<HTMLDivElement>(null);
 
@@ -391,7 +410,11 @@ function Tile({ trackRef, isFocused, onFocus, style }: {
     <div className="participant-wrapper" style={style}>
       <div
         ref={tileRef}
-        className={`participant-tile${isScreenShare ? " participant-tile--screenshare" : ""}${hasAudioActivity ? " participant-tile--speaking" : ""}`}
+        className={`participant-tile${isScreenShare ? " participant-tile--screenshare" : ""}`}
+        style={{
+          borderColor: `rgba(${Math.round(255 + (16 - 255) * audioIntensity)}, ${Math.round(255 + (194 - 255) * audioIntensity)}, ${Math.round(255 + (238 - 255) * audioIntensity)}, ${(0.08 + audioIntensity * 0.92).toFixed(2)})`,
+          boxShadow: audioIntensity > 0 ? `0 0 ${audioIntensity * MAX_GLOW}px rgba(16, 194, 238, ${(audioIntensity * 0.4).toFixed(2)})` : "none",
+        }}
       >
         {hasVideo && isTrackReference(trackRef) ? (
           <VideoTrack trackRef={trackRef} />

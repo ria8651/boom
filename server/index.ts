@@ -1,23 +1,70 @@
+import crypto from "crypto";
 import express from "express";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 import { AccessToken } from "livekit-server-sdk";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const app = express();
-app.use(express.json());
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'", "wss:", "https:"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      mediaSrc: ["'self'", "blob:"],
+      workerSrc: ["'self'", "blob:"],
+    },
+  },
+}));
+
+// Rate limiting on token endpoint — 10 attempts per minute per IP
+const tokenLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts. Try again in a minute." },
+});
+
+// Trust proxy (behind reverse proxy)
+app.set("trust proxy", 1);
+
+app.use(express.json({ limit: "1kb" }));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Timing-safe password comparison
+function checkPassword(input: string): boolean {
+  const expected = process.env.BOOM_PASSWORD ?? "";
+  if (input.length !== expected.length) return false;
+  return crypto.timingSafeEqual(
+    Buffer.from(input),
+    Buffer.from(expected),
+  );
+}
+
+// Input validation
+function isValidString(s: unknown, maxLen = 64): s is string {
+  return typeof s === "string" && s.length > 0 && s.length <= maxLen;
+}
+
 // Token endpoint
-app.post("/api/token", async (req, res) => {
+app.post("/api/token", tokenLimiter, async (req, res) => {
   const { room, identity, password } = req.body;
 
-  if (!room || !identity || !password) {
+  if (!isValidString(room) || !isValidString(identity) || !isValidString(password, 128)) {
     res.status(400).json({ error: "room, identity, and password are required" });
     return;
   }
 
-  if (password !== process.env.BOOM_PASSWORD) {
+  if (!checkPassword(password)) {
     res.status(401).json({ error: "Invalid password" });
     return;
   }
