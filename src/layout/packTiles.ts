@@ -209,6 +209,137 @@ function simulate(
   }
 }
 
+/* ── Grid packing ──────────────────────────────────────────────── */
+
+/**
+ * Distribute tiles across rows using greedy LPT (Longest Processing Time)
+ * load balancing. Each tile's "load" is scaleOverride * aspect.
+ */
+function distributeTiles(tiles: TileInput[], numRows: number): TileInput[][] {
+  const rows: TileInput[][] = Array.from({ length: numRows }, () => []);
+  const rowLoads = new Float64Array(numRows);
+
+  // Sort by load descending (LPT heuristic)
+  const sorted = [...tiles].sort(
+    (a, b) => (b.scaleOverride ?? 1) * b.aspect - (a.scaleOverride ?? 1) * a.aspect,
+  );
+
+  for (const tile of sorted) {
+    // Find row with minimum load
+    let minIdx = 0;
+    for (let r = 1; r < numRows; r++) {
+      if (rowLoads[r] < rowLoads[minIdx]) minIdx = r;
+    }
+    rows[minIdx].push(tile);
+    rowLoads[minIdx] += (tile.scaleOverride ?? 1) * tile.aspect;
+  }
+
+  return rows.filter((r) => r.length > 0);
+}
+
+/**
+ * Compute the maximum uniform scale factor for a given row distribution.
+ * Each tile i at scale s has:
+ *   width = s * scaleOverride_i * aspect_i
+ *   height = s * scaleOverride_i + labelHeight
+ */
+function computeMaxScale(
+  rows: TileInput[][],
+  containerW: number,
+  containerH: number,
+  gap: number,
+  labelH: number,
+): number {
+  let scale = Infinity;
+
+  // Width constraint per row
+  for (const row of rows) {
+    const sumAspectLoad = row.reduce((s, t) => s + (t.scaleOverride ?? 1) * t.aspect, 0);
+    if (sumAspectLoad > 0) {
+      const sRow = (containerW - (row.length - 1) * gap) / sumAspectLoad;
+      scale = Math.min(scale, sRow);
+    }
+  }
+
+  // Height constraint: sum of tallest tile per row + gaps + labels
+  const maxScalePerRow = rows.map((row) =>
+    Math.max(...row.map((t) => t.scaleOverride ?? 1)),
+  );
+  const sumMaxScale = maxScalePerRow.reduce((s, v) => s + v, 0);
+  if (sumMaxScale > 0) {
+    const sHeight = (containerH - rows.length * labelH - (rows.length - 1) * gap) / sumMaxScale;
+    scale = Math.min(scale, sHeight);
+  }
+
+  return Math.max(0, scale);
+}
+
+function packTilesGrid(
+  tiles: TileInput[],
+  containerW: number,
+  containerH: number,
+  options: LayoutOptions,
+): PackResult {
+  const { gap, labelHeight } = options;
+
+  let bestScale = 0;
+  let bestRows: TileInput[][] = [];
+
+  // Enumerate row counts 1..N, pick the one that maximizes scale
+  for (let numRows = 1; numRows <= tiles.length; numRows++) {
+    const rows = distributeTiles(tiles, numRows);
+    const scale = computeMaxScale(rows, containerW, containerH, gap, labelHeight);
+    if (scale > bestScale) {
+      bestScale = scale;
+      bestRows = rows;
+    }
+  }
+
+  if (bestScale <= 0) return { layout: [] };
+
+  // Position tiles: center each row horizontally, stack rows vertically centered
+  const s = bestScale;
+  const rowHeights = bestRows.map((row) =>
+    Math.max(...row.map((t) => s * (t.scaleOverride ?? 1))) + labelHeight,
+  );
+  const totalHeight = rowHeights.reduce((a, b) => a + b, 0) + (bestRows.length - 1) * gap;
+  let y = (containerH - totalHeight) / 2;
+
+  const layout: TileLayout[] = [];
+
+  for (let r = 0; r < bestRows.length; r++) {
+    const row = bestRows[r];
+    const rowH = rowHeights[r];
+
+    const rowWidth = row.reduce(
+      (sum, t) => sum + s * (t.scaleOverride ?? 1) * t.aspect,
+      0,
+    ) + (row.length - 1) * gap;
+    let x = (containerW - rowWidth) / 2;
+
+    for (const tile of row) {
+      const sc = tile.scaleOverride ?? 1;
+      const w = s * sc * tile.aspect;
+      const h = s * sc + labelHeight;
+      // Vertically center tile within its row
+      const tileY = y + (rowH - h) / 2;
+      layout.push({
+        key: tile.key,
+        x: Math.round(x),
+        y: Math.round(tileY),
+        width: Math.floor(w),
+        height: Math.floor(h),
+      });
+      x += w + gap;
+    }
+    y += rowH + gap;
+  }
+
+  return { layout };
+}
+
+/* ── Entry point ───────────────────────────────────────────────── */
+
 export function packTiles(
   tiles: TileInput[],
   containerW: number,
@@ -217,6 +348,10 @@ export function packTiles(
 ): PackResult {
   if (tiles.length === 0 || containerW <= 0 || containerH <= 0) {
     return { layout: [] };
+  }
+
+  if (options.mode === "grid") {
+    return packTilesGrid(tiles, containerW, containerH, options);
   }
 
   const { gap, labelHeight, debug } = options;

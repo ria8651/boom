@@ -1,3 +1,5 @@
+export type LayoutMode = "physics" | "grid";
+
 export interface TileInput {
   key: string;
   aspect: number; // width / height
@@ -16,6 +18,7 @@ export interface LayoutOptions {
   gap: number;
   labelHeight: number;
   debug?: boolean;
+  mode?: LayoutMode;
 }
 
 export interface SimFrame {

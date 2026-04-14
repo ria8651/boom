@@ -715,6 +715,98 @@ video:fullscreen {
   flex-shrink: 0;
 }
 
+/* ── Settings dialog ───────────────────────────────────────────── */
+
+.settings-dialog {
+  background: rgb(34, 34, 34);
+  color: rgb(220, 220, 220);
+  border: 1px solid rgb(60, 60, 60);
+  border-radius: 12px;
+  padding: 1.5rem;
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.settings-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.settings-dialog h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.settings-section {
+  border: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-section legend {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(150, 150, 150);
+  margin-bottom: 0.5rem;
+}
+
+.settings-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.settings-radio:hover {
+  background: rgb(45, 45, 45);
+}
+
+.settings-radio input[type="radio"] {
+  accent-color: rgb(16, 194, 238);
+  margin: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.settings-radio span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.settings-radio strong {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.settings-radio small {
+  font-size: 0.75rem;
+  color: rgb(150, 150, 150);
+}
+
+.settings-close-btn {
+  width: 100%;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background: rgb(50, 50, 50);
+  color: rgb(220, 220, 220);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.settings-close-btn:hover {
+  background: rgb(65, 65, 65);
+}
+
 /* ── Mobile ──────────────────────────────────────────────────── */
 
 /* Hide button labels when control bar is narrow (chat open, small screen) */

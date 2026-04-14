@@ -7,6 +7,7 @@ import {
 } from "livekit-client";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ConnectionDetails } from "../types/connection";
+import type { LayoutMode } from "../layout/types.js";
 import ErrorBanner from "./ErrorBanner";
 import VideoGrid from "./VideoGrid";
 import ControlBar from "./ControlBar";
@@ -29,11 +30,15 @@ function RoomInterior({
   setChatOpen,
   roomError,
   setRoomError,
+  layoutMode,
+  onLayoutModeChange,
 }: {
   chatOpen: boolean;
   setChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
   roomError: string;
   setRoomError: (msg: string) => void;
+  layoutMode: LayoutMode;
+  onLayoutModeChange: (mode: LayoutMode) => void;
 }) {
   const { chatMessages } = useChat();
   const [unreadChat, setUnreadChat] = useState(0);
@@ -112,7 +117,7 @@ function RoomInterior({
         <div className="room-main">
           <div className="room-content">
             <div className="grid-area" ref={contentRef}>
-              <VideoGrid containerWidth={gridSize.width} containerHeight={gridSize.height} />
+              <VideoGrid containerWidth={gridSize.width} containerHeight={gridSize.height} layoutMode={layoutMode} />
             </div>
             <div className="room-bottom">
               {roomError && <ErrorBanner message={roomError} onDismiss={() => setRoomError("")} />}
@@ -120,6 +125,8 @@ function RoomInterior({
                 chatOpen={chatOpen}
                 onToggleChat={() => setChatOpen((c) => !c)}
                 unreadChat={unreadChat}
+                layoutMode={layoutMode}
+                onLayoutModeChange={onLayoutModeChange}
               />
             </div>
           </div>
@@ -135,6 +142,13 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
   const [keyProvider] = useState(() => new ExternalE2EEKeyProvider());
   const [roomError, setRoomError] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(
+    () => (localStorage.getItem("boom-layout-mode") as LayoutMode) ?? "grid",
+  );
+  const handleLayoutModeChange = useCallback((mode: LayoutMode) => {
+    setLayoutMode(mode);
+    localStorage.setItem("boom-layout-mode", mode);
+  }, []);
 
   useMemo(() => {
     keyProvider.setKey(connectionDetails.password);
@@ -225,6 +239,8 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
         setChatOpen={setChatOpen}
         roomError={roomError}
         setRoomError={setRoomError}
+        layoutMode={layoutMode}
+        onLayoutModeChange={handleLayoutModeChange}
       />
     </LiveKitRoom>
   );

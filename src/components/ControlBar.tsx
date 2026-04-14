@@ -6,14 +6,19 @@ import {
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import { useEffect, useRef, useState } from "react";
+import type { LayoutMode } from "../layout/types.js";
+import SettingsModal, { type SettingsModalHandle } from "./SettingsModal.js";
 
 interface ControlBarProps {
   chatOpen: boolean;
   onToggleChat: () => void;
   unreadChat: number;
+  layoutMode: LayoutMode;
+  onLayoutModeChange: (mode: LayoutMode) => void;
 }
 
-export default function ControlBar({ chatOpen, onToggleChat, unreadChat }: ControlBarProps) {
+export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange }: ControlBarProps) {
+  const settingsRef = useRef<SettingsModalHandle>(null);
   const mic = useTrackToggle({ source: Track.Source.Microphone });
   const cam = useTrackToggle({ source: Track.Source.Camera });
   const screen = useTrackToggle({ source: Track.Source.ScreenShare, captureOptions: { audio: true } });
@@ -105,6 +110,15 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat }: Contr
         {unreadChat > 0 && <span className="chat-badge">{unreadChat}</span>}
       </button>
 
+      {/* Settings */}
+      <button
+        className="control-btn"
+        onClick={() => settingsRef.current?.showModal()}
+      >
+        <SettingsIcon />
+        <span className="btn-label">Settings</span>
+      </button>
+
       {/* Leave */}
       <button
         {...disconnect.buttonProps}
@@ -113,6 +127,8 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat }: Contr
         <LeaveIcon />
         <span className="btn-label">Leave</span>
       </button>
+
+      <SettingsModal ref={settingsRef} layoutMode={layoutMode} onChange={onLayoutModeChange} />
     </div>
   );
 }
@@ -269,6 +285,14 @@ function LeaveIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
       <path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z" />
     </svg>
   );
 }

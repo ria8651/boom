@@ -3,7 +3,7 @@ import { Track } from "livekit-client";
 import type { TrackReferenceOrPlaceholder } from "@livekit/components-core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { packTiles } from "../layout/packTiles.js";
-import type { TileLayout } from "../layout/types.js";
+import type { TileLayout, LayoutMode } from "../layout/types.js";
 import { GAP, PAD, LABEL_HEIGHT, DEFAULT_ASPECT } from "../layout/constants.js";
 
 /* ── Icons ───────────────────────────────────────────────────── */
@@ -167,10 +167,11 @@ function Tile({ trackRef, isFocused, onFocus, style, onResizeStart }: {
 
 /* ── MiniGrid: measured container that packs tiles ────────────── */
 
-function MiniGrid({ tracks, onFocus, focusedKeys }: {
+function MiniGrid({ tracks, onFocus, focusedKeys, layoutMode }: {
   tracks: TrackReferenceOrPlaceholder[];
   onFocus: (key: string) => void;
   focusedKeys: Set<string>;
+  layoutMode?: LayoutMode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -205,7 +206,7 @@ function MiniGrid({ tracks, onFocus, focusedKeys }: {
 
   const w = Math.max(0, size.width - PAD * 2);
   const h = Math.max(0, size.height - PAD * 2);
-  const layoutOpts = useMemo(() => ({ gap: GAP, labelHeight: LABEL_HEIGHT, debug: true }), []);
+  const layoutOpts = useMemo(() => ({ gap: GAP, labelHeight: LABEL_HEIGHT, debug: true, mode: layoutMode }), [layoutMode]);
   const packResult = useMemo(() => packTiles(tileInputs, w, h, layoutOpts), [tileInputs, w, h, layoutOpts]);
   const { layout } = packResult;
   const cachedFramesRef = useRef(packResult.debugFrames);
@@ -301,24 +302,26 @@ function MiniGrid({ tracks, onFocus, focusedKeys }: {
             isFocused={focusedKeys.has(key)}
             onFocus={() => onFocus(key)}
             style={style}
-            onResizeStart={(e) => onResizeStart(key, e)}
+            onResizeStart={layoutMode !== "grid" ? (e) => onResizeStart(key, e) : undefined}
           />
         );
       })}
-      <button
-        className="layout-debug-btn"
-        onClick={toggleSimulation}
-        aria-label={isAnimating ? "Stop simulation" : "Replay layout simulation"}
-      >
-        {isAnimating ? "\u25A0" : "\u25B6"}
-      </button>
+      {layoutMode !== "grid" && (
+        <button
+          className="layout-debug-btn"
+          onClick={toggleSimulation}
+          aria-label={isAnimating ? "Stop simulation" : "Replay layout simulation"}
+        >
+          {isAnimating ? "\u25A0" : "\u25B6"}
+        </button>
+      )}
     </div>
   );
 }
 
 /* ── Main VideoGrid ──────────────────────────────────────────── */
 
-export default function VideoGrid({ containerWidth, containerHeight }: { containerWidth: number; containerHeight: number }) {
+export default function VideoGrid({ containerWidth, containerHeight, layoutMode }: { containerWidth: number; containerHeight: number; layoutMode?: LayoutMode }) {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -356,7 +359,7 @@ export default function VideoGrid({ containerWidth, containerHeight }: { contain
 
   // No focus mode — single grid
   if (!hasFocus) {
-    return <MiniGrid tracks={tracks} onFocus={toggleFocus} focusedKeys={focusedKeys} />;
+    return <MiniGrid tracks={tracks} onFocus={toggleFocus} focusedKeys={focusedKeys} layoutMode={layoutMode} />;
   }
 
   // Focus mode — two packed grids split by percentage
@@ -370,13 +373,13 @@ export default function VideoGrid({ containerWidth, containerHeight }: { contain
   return (
     <div className={`focus-layout focus-layout--${focusDir}`}>
       <div style={focusStyle} className="focus-half">
-        <MiniGrid tracks={focused} onFocus={toggleFocus} focusedKeys={focusedKeys} />
+        <MiniGrid tracks={focused} onFocus={toggleFocus} focusedKeys={focusedKeys} layoutMode={layoutMode} />
       </div>
       {others.length > 0 && (
         <>
           <Divider direction={focusDir} onResize={setSplitPercent} containerWidth={containerWidth} containerHeight={containerHeight} />
           <div style={othersStyle} className="focus-half">
-            <MiniGrid tracks={others} onFocus={toggleFocus} focusedKeys={focusedKeys} />
+            <MiniGrid tracks={others} onFocus={toggleFocus} focusedKeys={focusedKeys} layoutMode={layoutMode} />
           </div>
         </>
       )}

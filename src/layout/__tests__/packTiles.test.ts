@@ -299,4 +299,82 @@ describe("packTiles", () => {
     const { debugFrames } = packTiles([tile("a")], 1920, 1080, defaultOpts);
     expect(debugFrames).toBeUndefined();
   });
+
+  /* ── Grid mode ──────────────────────────────────────────────── */
+
+  describe("grid mode", () => {
+    const gridOpts = { ...defaultOpts, mode: "grid" as const };
+
+    it("returns empty for 0 tiles", () => {
+      const { layout } = packTiles([], 1920, 1080, gridOpts);
+      expect(layout).toEqual([]);
+    });
+
+    it("single tile is centered", () => {
+      const cw = 1920, ch = 1080;
+      const { layout } = packTiles([tile("a")], cw, ch, gridOpts);
+      expect(layout).toHaveLength(1);
+      assertInvariants(layout, cw, ch);
+
+      const t = layout[0];
+      const tileCx = t.x + t.width / 2;
+      const tileCy = t.y + t.height / 2;
+      expect(Math.abs(tileCx - cw / 2)).toBeLessThan(cw * 0.1);
+      expect(Math.abs(tileCy - ch / 2)).toBeLessThan(ch * 0.1);
+    });
+
+    it("4 equal tiles pack with no overlaps", () => {
+      const cw = 1920, ch = 1080;
+      const tiles = [tile("a"), tile("b"), tile("c"), tile("d")];
+      const { layout } = packTiles(tiles, cw, ch, gridOpts);
+      expect(layout).toHaveLength(4);
+      assertInvariants(layout, cw, ch);
+    });
+
+    it("20 tiles stress test: fast and correct", () => {
+      const cw = 1920, ch = 1080;
+      const tiles = Array.from({ length: 20 }, (_, i) => tile(`t${i}`, 1 + (i % 3) * 0.3));
+
+      const start = performance.now();
+      const { layout } = packTiles(tiles, cw, ch, gridOpts);
+      const elapsed = performance.now() - start;
+
+      expect(layout).toHaveLength(20);
+      assertInvariants(layout, cw, ch);
+      expect(elapsed).toBeLessThan(10);
+    });
+
+    it("grid packing ratio > 50%", () => {
+      const cw = 1920, ch = 1080;
+      const tiles = Array.from({ length: 6 }, (_, i) => tile(`t${i}`));
+      const { layout } = packTiles(tiles, cw, ch, gridOpts);
+      const ratio = packingRatio(layout, cw, ch);
+      expect(ratio).toBeGreaterThan(0.5);
+    });
+
+    it("is stable under small viewport changes", () => {
+      const tiles = [tile("a"), tile("b"), tile("c"), tile("d")];
+      const { layout: l1 } = packTiles(tiles, 1920, 1080, gridOpts);
+      const { layout: l2 } = packTiles(tiles, 1925, 1085, gridOpts);
+
+      for (let i = 0; i < l1.length; i++) {
+        const t1 = l1.find((t) => t.key === l2[i].key)!;
+        const t2 = l2[i];
+        expect(Math.abs(t1.x - t2.x)).toBeLessThan(10);
+        expect(Math.abs(t1.y - t2.y)).toBeLessThan(10);
+      }
+    });
+
+    it("is deterministic", () => {
+      const tiles = [tile("a"), tile("b", 4 / 3), tile("c", 1)];
+      const { layout: l1 } = packTiles(tiles, 1920, 1080, gridOpts);
+      const { layout: l2 } = packTiles(tiles, 1920, 1080, gridOpts);
+      expect(l1).toEqual(l2);
+    });
+
+    it("does not return debug frames", () => {
+      const { debugFrames } = packTiles([tile("a"), tile("b")], 1920, 1080, gridOpts);
+      expect(debugFrames).toBeUndefined();
+    });
+  });
 });
