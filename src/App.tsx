@@ -55,6 +55,16 @@ function App() {
   const [error, setError] = useState("");
   const [restoring, setRestoring] = useState(true);
 
+  // Warn before closing the tab while in an active session
+  useEffect(() => {
+    if (!connectionDetails) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [connectionDetails]);
+
   // On mount, try to restore session with a fresh token
   useEffect(() => {
     const session = loadSession();
