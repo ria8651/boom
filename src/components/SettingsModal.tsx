@@ -1,9 +1,11 @@
 import { useRef, useImperativeHandle, forwardRef } from "react";
 import type { LayoutMode } from "../layout/types.js";
 
+export type ContentHint = "" | "text" | "detail" | "motion";
+
 export interface ScreenShareSettings {
   preset: string;
-  contentHint: string;
+  contentHint: ContentHint;
 }
 
 interface SettingsModalProps {
@@ -104,7 +106,7 @@ const SettingsModal = forwardRef<SettingsModalHandle, SettingsModalProps>(
                 className="settings-select"
                 value={screenShareSettings.contentHint}
                 onChange={(e) =>
-                  onScreenShareSettingsChange({ ...screenShareSettings, contentHint: e.target.value })
+                  onScreenShareSettingsChange({ ...screenShareSettings, contentHint: e.target.value as ContentHint })
                 }
               >
                 {contentHints.map((h) => (
