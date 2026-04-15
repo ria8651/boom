@@ -358,7 +358,7 @@ export default function VideoGrid({ containerWidth, containerHeight, layoutMode,
   const others = tracks.filter((t) => !focusedKeys.has(tileKey(t)));
   const hasFocus = focused.length > 0;
   const containerAspect = containerWidth / (containerHeight || 1);
-  const focusDir = containerAspect >= 1 ? "row" as const : "column" as const;
+  const focusDir = containerAspect >= 1.4 ? "row" as const : "column" as const;
 
   // No focus mode — single grid
   if (!hasFocus) {

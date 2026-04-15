@@ -1,4 +1,4 @@
-import { LiveKitRoom, RoomAudioRenderer, useChat, useParticipants } from "@livekit/components-react";
+import { LiveKitRoom, RoomAudioRenderer, useChat, useParticipants, useRoomContext } from "@livekit/components-react";
 import {
   DisconnectReason,
   ExternalE2EEKeyProvider,
@@ -17,6 +17,17 @@ import ControlBar from "./ControlBar";
 import ChatPanel from "./ChatPanel";
 import PipContent from "./PipContent";
 import { usePictureInPicture } from "../hooks/usePictureInPicture";
+
+const customScreenSharePresets: Record<string, VideoPreset> = {
+  h720fps60: new VideoPreset(1280, 720, 3_000_000, 60, "medium"),
+  h1080fps60: new VideoPreset(1920, 1080, 8_000_000, 60, "medium"),
+};
+
+function resolveScreenSharePreset(key: string): VideoPreset {
+  return customScreenSharePresets[key]
+    ?? ScreenSharePresets[key as keyof typeof ScreenSharePresets]
+    ?? ScreenSharePresets.h1080fps30;
+}
 
 interface RoomPageProps {
   connectionDetails: ConnectionDetails;
@@ -49,6 +60,14 @@ function RoomInterior({
   screenShareSettings: ScreenShareSettings;
   onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
 }) {
+  const room = useRoomContext();
+  // Update screen share encoding on the live room without triggering a reconnect
+  useEffect(() => {
+    if (room.options.publishDefaults) {
+      room.options.publishDefaults.screenShareEncoding = resolveScreenSharePreset(screenShareSettings.preset).encoding;
+    }
+  }, [room, screenShareSettings.preset]);
+
   const { chatMessages } = useChat();
   const [unreadChat, setUnreadChat] = useState(0);
   const prevCountRef = useRef(chatMessages.length);
@@ -183,26 +202,20 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
   }, [keyProvider, connectionDetails.password]);
 
   const roomOptions = useMemo((): RoomOptions => {
-    const customPresets: Record<string, VideoPreset> = {
-      h720fps60: new VideoPreset(1280, 720, 3_000_000, 60, "medium"),
-      h1080fps60: new VideoPreset(1920, 1080, 8_000_000, 60, "medium"),
-    };
-    const preset = customPresets[screenShareSettings.preset]
-      ?? ScreenSharePresets[screenShareSettings.preset as keyof typeof ScreenSharePresets]
-      ?? ScreenSharePresets.h1080fps30;
     const opts: RoomOptions = {
       // Don't auto-disconnect on beforeunload — we handle this ourselves
       // so the browser's "Leave site?" Cancel button actually works.
       disconnectOnPageLeave: false,
       publishDefaults: {
-        screenShareEncoding: preset.encoding,
+        screenShareEncoding: resolveScreenSharePreset(screenShareSettings.preset).encoding,
+        dtx: false,
       },
     };
     if (worker) {
       opts.e2ee = { keyProvider, worker };
     }
     return opts;
-  }, [keyProvider, screenShareSettings.preset]);
+  }, [keyProvider]);
 
   const handleDisconnected = useCallback(
     (reason?: DisconnectReason) => {
