@@ -27,7 +27,7 @@ function MicOffIcon() {
 
 /* ── Tile component ──────────────────────────────────────────── */
 
-function tileKey(trackRef: TrackReferenceOrPlaceholder) {
+export function tileKey(trackRef: TrackReferenceOrPlaceholder) {
   return `${trackRef.participant.identity}-${trackRef.source}`;
 }
 
@@ -65,7 +65,7 @@ function FullscreenIcon() {
   );
 }
 
-function Tile({ trackRef, isFocused, onFocus, style, onResizeStart }: {
+export function Tile({ trackRef, isFocused, onFocus, style, onResizeStart }: {
   trackRef: TrackReferenceOrPlaceholder;
   isFocused?: boolean;
   onFocus: () => void;
@@ -167,14 +167,16 @@ function Tile({ trackRef, isFocused, onFocus, style, onResizeStart }: {
 
 /* ── MiniGrid: measured container that packs tiles ────────────── */
 
-function MiniGrid({ tracks, onFocus, focusedKeys, layoutMode }: {
+export function MiniGrid({ tracks, onFocus, focusedKeys, layoutMode, containerSize }: {
   tracks: TrackReferenceOrPlaceholder[];
   onFocus: (key: string) => void;
   focusedKeys: Set<string>;
   layoutMode?: LayoutMode;
+  containerSize?: { width: number; height: number };
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [measuredSize, setMeasuredSize] = useState({ width: 0, height: 0 });
+  const size = containerSize ?? measuredSize;
   const [scaleOverrides, setScaleOverrides] = useState<Map<string, number>>(new Map());
 
   // Debug animation state
@@ -183,14 +185,15 @@ function MiniGrid({ tracks, onFocus, focusedKeys, layoutMode }: {
   const debugAnimRef = useRef<number>(0);
 
   useEffect(() => {
+    if (containerSize) return; // Skip self-measurement when size is provided externally
     const el = ref.current;
     if (!el) return;
-    const measure = () => setSize({ width: el.clientWidth, height: el.clientHeight });
+    const measure = () => setMeasuredSize({ width: el.clientWidth, height: el.clientHeight });
     measure();
     const obs = new ResizeObserver(measure);
     obs.observe(el);
     return () => obs.disconnect();
-  }, []);
+  }, [containerSize]);
 
   const tileInputs = useMemo(() =>
     tracks.map((t) => {
@@ -321,7 +324,7 @@ function MiniGrid({ tracks, onFocus, focusedKeys, layoutMode }: {
 
 /* ── Main VideoGrid ──────────────────────────────────────────── */
 
-export default function VideoGrid({ containerWidth, containerHeight, layoutMode }: { containerWidth: number; containerHeight: number; layoutMode?: LayoutMode }) {
+export default function VideoGrid({ containerWidth, containerHeight, layoutMode, containerSize }: { containerWidth: number; containerHeight: number; layoutMode?: LayoutMode; containerSize?: { width: number; height: number } }) {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -359,7 +362,7 @@ export default function VideoGrid({ containerWidth, containerHeight, layoutMode 
 
   // No focus mode — single grid
   if (!hasFocus) {
-    return <MiniGrid tracks={tracks} onFocus={toggleFocus} focusedKeys={focusedKeys} layoutMode={layoutMode} />;
+    return <MiniGrid tracks={tracks} onFocus={toggleFocus} focusedKeys={focusedKeys} layoutMode={layoutMode} containerSize={containerSize} />;
   }
 
   // Focus mode — two packed grids split by percentage
@@ -373,13 +376,13 @@ export default function VideoGrid({ containerWidth, containerHeight, layoutMode 
   return (
     <div className={`focus-layout focus-layout--${focusDir}`}>
       <div style={focusStyle} className="focus-half">
-        <MiniGrid tracks={focused} onFocus={toggleFocus} focusedKeys={focusedKeys} layoutMode={layoutMode} />
+        <MiniGrid tracks={focused} onFocus={toggleFocus} focusedKeys={focusedKeys} layoutMode={layoutMode} containerSize={containerSize} />
       </div>
       {others.length > 0 && (
         <>
           <Divider direction={focusDir} onResize={setSplitPercent} containerWidth={containerWidth} containerHeight={containerHeight} />
           <div style={othersStyle} className="focus-half">
-            <MiniGrid tracks={others} onFocus={toggleFocus} focusedKeys={focusedKeys} layoutMode={layoutMode} />
+            <MiniGrid tracks={others} onFocus={toggleFocus} focusedKeys={focusedKeys} layoutMode={layoutMode} containerSize={containerSize} />
           </div>
         </>
       )}

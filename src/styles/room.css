@@ -807,6 +807,50 @@ video:fullscreen {
   background: rgb(65, 65, 65);
 }
 
+/* ── Leave confirmation dialog ────────────────────────────────── */
+
+.leave-dialog {
+  background: rgb(34, 34, 34);
+  color: rgb(220, 220, 220);
+  border: 1px solid rgb(60, 60, 60);
+  border-radius: 12px;
+  padding: 1.5rem;
+  min-width: 260px;
+  font-family: "Open Sans", system-ui, sans-serif;
+}
+
+.leave-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.leave-dialog p {
+  margin: 0 0 1.25rem;
+  font-size: 0.9375rem;
+}
+
+.leave-dialog-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.leave-dialog-btn {
+  background: rgb(50, 50, 50);
+  color: rgb(220, 220, 220);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-family: "Open Sans", system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.leave-dialog-btn--danger {
+  background: #d32f2f;
+  color: #fff;
+  border-color: transparent;
+}
+
 /* ── Mobile ──────────────────────────────────────────────────── */
 
 /* Hide button labels when control bar is narrow (chat open, small screen) */

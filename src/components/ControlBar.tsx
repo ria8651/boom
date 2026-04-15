@@ -15,14 +15,18 @@ interface ControlBarProps {
   unreadChat: number;
   layoutMode: LayoutMode;
   onLayoutModeChange: (mode: LayoutMode) => void;
+  pipSupported?: boolean;
+  pipActive?: boolean;
+  onTogglePip?: () => void;
 }
 
-export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange }: ControlBarProps) {
+export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, pipSupported, pipActive, onTogglePip }: ControlBarProps) {
   const settingsRef = useRef<SettingsModalHandle>(null);
   const mic = useTrackToggle({ source: Track.Source.Microphone });
   const cam = useTrackToggle({ source: Track.Source.Camera });
   const screen = useTrackToggle({ source: Track.Source.ScreenShare, captureOptions: { audio: true } });
   const disconnect = useDisconnectButton({});
+  const leaveDialogRef = useRef<HTMLDialogElement>(null);
   const { lastMicrophoneError, lastCameraError } = useLocalParticipant();
 
   const micDevices = useMediaDeviceSelect({ kind: "audioinput" });
@@ -119,14 +123,29 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
         <span className="btn-label">Settings</span>
       </button>
 
+      {/* Picture-in-Picture */}
+      {pipSupported && onTogglePip && (
+        <button className={`control-btn${pipActive ? " control-btn--active" : ""}`} onClick={onTogglePip}>
+          <PipIcon />
+          <span className="btn-label">Popout</span>
+        </button>
+      )}
+
       {/* Leave */}
       <button
-        {...disconnect.buttonProps}
         className="control-btn control-btn--danger"
+        onClick={() => leaveDialogRef.current?.showModal()}
       >
         <LeaveIcon />
         <span className="btn-label">Leave</span>
       </button>
+      <dialog ref={leaveDialogRef} className="leave-dialog">
+        <p>Leave the room?</p>
+        <div className="leave-dialog-actions">
+          <button className="leave-dialog-btn" onClick={() => leaveDialogRef.current?.close()}>Cancel</button>
+          <button className="leave-dialog-btn leave-dialog-btn--danger" onClick={() => { leaveDialogRef.current?.close(); disconnect.buttonProps.onClick(); }}>Leave</button>
+        </div>
+      </dialog>
 
       <SettingsModal ref={settingsRef} layoutMode={layoutMode} onChange={onLayoutModeChange} />
     </div>
@@ -277,6 +296,14 @@ function ChatIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
       <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
+    </svg>
+  );
+}
+
+function PipIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z" />
     </svg>
   );
 }

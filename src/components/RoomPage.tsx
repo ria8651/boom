@@ -3,6 +3,7 @@ import {
   DisconnectReason,
   ExternalE2EEKeyProvider,
   MediaDeviceFailure,
+  ScreenSharePresets,
   type RoomOptions,
 } from "livekit-client";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -12,6 +13,8 @@ import ErrorBanner from "./ErrorBanner";
 import VideoGrid from "./VideoGrid";
 import ControlBar from "./ControlBar";
 import ChatPanel from "./ChatPanel";
+import PipContent from "./PipContent";
+import { usePictureInPicture } from "../hooks/usePictureInPicture";
 
 interface RoomPageProps {
   connectionDetails: ConnectionDetails;
@@ -45,6 +48,7 @@ function RoomInterior({
   const prevCountRef = useRef(chatMessages.length);
   const contentRef = useRef<HTMLDivElement>(null);
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
+  const pip = usePictureInPicture();
 
   // Track participant join/leave for system messages
   const participants = useParticipants();
@@ -127,6 +131,9 @@ function RoomInterior({
                 unreadChat={unreadChat}
                 layoutMode={layoutMode}
                 onLayoutModeChange={onLayoutModeChange}
+                pipSupported={pip.isSupported}
+                pipActive={pip.isActive}
+                onTogglePip={pip.isActive ? pip.close : pip.open}
               />
             </div>
           </div>
@@ -134,6 +141,7 @@ function RoomInterior({
         </div>
       </div>
       <RoomAudioRenderer />
+      {pip.pipWindow && <PipContent pipWindow={pip.pipWindow} layoutMode={layoutMode} />}
     </>
   );
 }
@@ -155,13 +163,18 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
   }, [keyProvider, connectionDetails.password]);
 
   const roomOptions = useMemo((): RoomOptions => {
-    if (!worker) return {};
-    return {
-      e2ee: {
-        keyProvider,
-        worker,
+    const opts: RoomOptions = {
+      // Don't auto-disconnect on beforeunload — we handle this ourselves
+      // so the browser's "Leave site?" Cancel button actually works.
+      disconnectOnPageLeave: false,
+      publishDefaults: {
+        screenShareEncoding: ScreenSharePresets.h1080fps30.encoding,
       },
     };
+    if (worker) {
+      opts.e2ee = { keyProvider, worker };
+    }
+    return opts;
   }, [keyProvider]);
 
   const handleDisconnected = useCallback(
