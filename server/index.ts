@@ -7,7 +7,7 @@ import { AccessToken } from "livekit-server-sdk";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const isDev = process.env.NODE_ENV !== "production";
+const isDev = process.env.NODE_ENV === "development";
 const app = express();
 
 // Security headers — relaxed in dev for Vite's inline scripts and HMR websocket
