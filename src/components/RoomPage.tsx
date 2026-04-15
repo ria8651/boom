@@ -4,11 +4,13 @@ import {
   ExternalE2EEKeyProvider,
   MediaDeviceFailure,
   ScreenSharePresets,
+  VideoPreset,
   type RoomOptions,
 } from "livekit-client";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ConnectionDetails } from "../types/connection";
 import type { LayoutMode } from "../layout/types.js";
+import type { ScreenShareSettings } from "./SettingsModal.js";
 import ErrorBanner from "./ErrorBanner";
 import VideoGrid from "./VideoGrid";
 import ControlBar from "./ControlBar";
@@ -35,6 +37,8 @@ function RoomInterior({
   setRoomError,
   layoutMode,
   onLayoutModeChange,
+  screenShareSettings,
+  onScreenShareSettingsChange,
 }: {
   chatOpen: boolean;
   setChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -42,6 +46,8 @@ function RoomInterior({
   setRoomError: (msg: string) => void;
   layoutMode: LayoutMode;
   onLayoutModeChange: (mode: LayoutMode) => void;
+  screenShareSettings: ScreenShareSettings;
+  onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
 }) {
   const { chatMessages } = useChat();
   const [unreadChat, setUnreadChat] = useState(0);
@@ -131,6 +137,8 @@ function RoomInterior({
                 unreadChat={unreadChat}
                 layoutMode={layoutMode}
                 onLayoutModeChange={onLayoutModeChange}
+                screenShareSettings={screenShareSettings}
+                onScreenShareSettingsChange={onScreenShareSettingsChange}
                 pipSupported={pip.isSupported}
                 pipActive={pip.isActive}
                 onTogglePip={pip.isActive ? pip.close : pip.open}
@@ -158,24 +166,43 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
     localStorage.setItem("boom-layout-mode", mode);
   }, []);
 
+  const [screenShareSettings, setScreenShareSettings] = useState<ScreenShareSettings>(() => {
+    const stored = localStorage.getItem("boom-screenshare-settings");
+    if (stored) {
+      try { return JSON.parse(stored); } catch { /* fall through */ }
+    }
+    return { preset: "h1080fps30", contentHint: "" };
+  });
+  const handleScreenShareSettingsChange = useCallback((settings: ScreenShareSettings) => {
+    setScreenShareSettings(settings);
+    localStorage.setItem("boom-screenshare-settings", JSON.stringify(settings));
+  }, []);
+
   useMemo(() => {
     keyProvider.setKey(connectionDetails.password);
   }, [keyProvider, connectionDetails.password]);
 
   const roomOptions = useMemo((): RoomOptions => {
+    const customPresets: Record<string, VideoPreset> = {
+      h720fps60: new VideoPreset(1280, 720, 3_000_000, 60, "medium"),
+      h1080fps60: new VideoPreset(1920, 1080, 8_000_000, 60, "medium"),
+    };
+    const preset = customPresets[screenShareSettings.preset]
+      ?? ScreenSharePresets[screenShareSettings.preset as keyof typeof ScreenSharePresets]
+      ?? ScreenSharePresets.h1080fps30;
     const opts: RoomOptions = {
       // Don't auto-disconnect on beforeunload — we handle this ourselves
       // so the browser's "Leave site?" Cancel button actually works.
       disconnectOnPageLeave: false,
       publishDefaults: {
-        screenShareEncoding: ScreenSharePresets.h1080fps30.encoding,
+        screenShareEncoding: preset.encoding,
       },
     };
     if (worker) {
       opts.e2ee = { keyProvider, worker };
     }
     return opts;
-  }, [keyProvider]);
+  }, [keyProvider, screenShareSettings.preset]);
 
   const handleDisconnected = useCallback(
     (reason?: DisconnectReason) => {
@@ -240,6 +267,8 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
       serverUrl={connectionDetails.serverUrl}
       token={connectionDetails.token}
       connect={true}
+      audio={localStorage.getItem("boom-mic-enabled") !== "false"}
+      video={localStorage.getItem("boom-cam-enabled") !== "false"}
       onDisconnected={handleDisconnected}
       onError={handleError}
       onMediaDeviceFailure={handleMediaDeviceFailure}
@@ -254,6 +283,8 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
         setRoomError={setRoomError}
         layoutMode={layoutMode}
         onLayoutModeChange={handleLayoutModeChange}
+        screenShareSettings={screenShareSettings}
+        onScreenShareSettingsChange={handleScreenShareSettingsChange}
       />
     </LiveKitRoom>
   );

@@ -5,9 +5,9 @@ import {
   useLocalParticipant,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { LayoutMode } from "../layout/types.js";
-import SettingsModal, { type SettingsModalHandle } from "./SettingsModal.js";
+import SettingsModal, { type SettingsModalHandle, type ScreenShareSettings } from "./SettingsModal.js";
 
 interface ControlBarProps {
   chatOpen: boolean;
@@ -15,16 +15,26 @@ interface ControlBarProps {
   unreadChat: number;
   layoutMode: LayoutMode;
   onLayoutModeChange: (mode: LayoutMode) => void;
+  screenShareSettings: ScreenShareSettings;
+  onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
   pipSupported?: boolean;
   pipActive?: boolean;
   onTogglePip?: () => void;
 }
 
-export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, pipSupported, pipActive, onTogglePip }: ControlBarProps) {
+export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, screenShareSettings, onScreenShareSettingsChange, pipSupported, pipActive, onTogglePip }: ControlBarProps) {
   const settingsRef = useRef<SettingsModalHandle>(null);
   const mic = useTrackToggle({ source: Track.Source.Microphone });
   const cam = useTrackToggle({ source: Track.Source.Camera });
-  const screen = useTrackToggle({ source: Track.Source.ScreenShare, captureOptions: { audio: true } });
+
+  // Persist mic/cam state so it survives rejoin
+  useEffect(() => { localStorage.setItem("boom-mic-enabled", String(mic.enabled)); }, [mic.enabled]);
+  useEffect(() => { localStorage.setItem("boom-cam-enabled", String(cam.enabled)); }, [cam.enabled]);
+  const screenCaptureOptions = useMemo(() => ({
+    audio: true,
+    contentHint: screenShareSettings.contentHint || undefined,
+  } as const), [screenShareSettings.contentHint]);
+  const screen = useTrackToggle({ source: Track.Source.ScreenShare, captureOptions: screenCaptureOptions });
   const disconnect = useDisconnectButton({});
   const leaveDialogRef = useRef<HTMLDialogElement>(null);
   const { lastMicrophoneError, lastCameraError } = useLocalParticipant();
@@ -147,7 +157,7 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
         </div>
       </dialog>
 
-      <SettingsModal ref={settingsRef} layoutMode={layoutMode} onChange={onLayoutModeChange} />
+      <SettingsModal ref={settingsRef} layoutMode={layoutMode} onChange={onLayoutModeChange} screenShareSettings={screenShareSettings} onScreenShareSettingsChange={onScreenShareSettingsChange} />
     </div>
   );
 }

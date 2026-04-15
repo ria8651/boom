@@ -1,16 +1,18 @@
 import crypto from "crypto";
 import express from "express";
+import fs from "fs";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { AccessToken } from "livekit-server-sdk";
 import path from "path";
 import { fileURLToPath } from "url";
 
+const isDev = process.env.NODE_ENV !== "production";
 const app = express();
 
-// Security headers
+// Security headers — relaxed in dev for Vite's inline scripts and HMR websocket
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: isDev ? false : {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
@@ -91,14 +93,34 @@ app.post("/api/token", tokenLimiter, async (req, res) => {
   });
 });
 
-// In production, serve the built frontend
-const distPath = path.join(__dirname, "..", "dist");
-app.use(express.static(distPath));
-app.get("/{*splat}", (_req, res) => {
-  res.sendFile(path.join(distPath, "index.html"));
-});
+if (isDev) {
+  // In development, mount Vite's dev server as middleware for HMR + asset serving
+  const { createServer } = await import("vite");
+  const vite = await createServer({
+    server: { middlewareMode: true },
+    appType: "custom",
+  });
+  app.use(vite.middlewares);
+  // SPA fallback — serve index.html through Vite's transform pipeline
+  app.get("/{*splat}", async (_req, res, next) => {
+    try {
+      const raw = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf-8");
+      const html = await vite.transformIndexHtml(_req.originalUrl, raw);
+      res.status(200).set("Content-Type", "text/html").send(html);
+    } catch (e) {
+      next(e);
+    }
+  });
+} else {
+  // In production, serve the built frontend
+  const distPath = path.join(__dirname, "..", "dist");
+  app.use(express.static(distPath));
+  app.get("/{*splat}", (_req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
 
 const port = parseInt(process.env.PORT || "3000", 10);
 app.listen(port, () => {
-  console.log(`boom server listening on port ${port}`);
+  console.log(`boom server listening on port ${port} (${isDev ? "dev" : "production"})`);
 });

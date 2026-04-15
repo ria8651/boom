@@ -4,13 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
-    "dev:server": "tsx --env-file=.env.local server/index.ts",
+    "dev": "tsx --env-file=.env.local server/index.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "node --env-file=.env.local node_modules/.bin/playwright test",
     "test:unit": "vitest",
-    "start": "tsx server/index.ts"
+    "start": "NODE_ENV=production tsx server/index.ts"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.20",
