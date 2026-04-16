@@ -2,6 +2,7 @@ services:
   boom:
     build: .
     image: boom:latest
+    pull_policy: never
     container_name: boom
     restart: unless-stopped
     ports:
@@ -11,6 +12,11 @@ services:
       - LIVEKIT_URL=${LIVEKIT_URL}
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - BOOM_SESSION_SECRET=${BOOM_SESSION_SECRET}
+      - BOOM_ALLOWED_USERS=${BOOM_ALLOWED_USERS}
+      - BOOM_ALLOWED_ORGS=${BOOM_ALLOWED_ORGS}
     depends_on:
       - livekit
 
@@ -23,7 +29,7 @@ services:
       - "7881:7881"
       - "7882:7882/udp"
     environment:
-      - LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
     command: --config /etc/livekit.yaml
