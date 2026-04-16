@@ -2,6 +2,7 @@ services:
   boom:
     build: .
     image: boom:latest
+    pull_policy: never
     container_name: boom
     restart: unless-stopped
     ports:
