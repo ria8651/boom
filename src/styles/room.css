@@ -24,6 +24,36 @@
   min-width: 0;
 }
 
+/* ── Recording banner ─────────────────────────────────────────── */
+
+.recording-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  background: rgba(249, 31, 49, 0.15);
+  color: #f91f31;
+  font-family: "Open Sans", system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.recording-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f91f31;
+  animation: recording-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes recording-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
 .grid-area {
   flex: 1;
   min-height: 0;
@@ -461,6 +491,16 @@ video:fullscreen {
 
 .control-btn--sharing:hover {
   background: rgba(16, 194, 238, 0.25);
+}
+
+.control-btn--recording {
+  background: rgba(249, 31, 49, 0.15);
+  border-color: #f91f31;
+  color: #f91f31;
+}
+
+.control-btn--recording:hover {
+  background: rgba(249, 31, 49, 0.25);
 }
 
 .control-btn--danger {

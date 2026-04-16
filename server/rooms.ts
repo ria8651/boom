@@ -6,19 +6,22 @@ export interface ActiveRoom {
   createdAt: number;
 }
 
-function getClient(): RoomServiceClient {
+export function getLiveKitHttpUrl(): string {
   const url = process.env.LIVEKIT_URL ?? "";
-  // RoomServiceClient wants an https:// URL, but LIVEKIT_URL is wss://
-  const httpUrl = url.replace(/^wss:\/\//, "https://").replace(/^ws:\/\//, "http://");
+  // LiveKit clients want an https:// URL, but LIVEKIT_URL is wss://
+  return url.replace(/^wss:\/\//, "https://").replace(/^ws:\/\//, "http://");
+}
+
+export function getRoomServiceClient(): RoomServiceClient {
   return new RoomServiceClient(
-    httpUrl,
+    getLiveKitHttpUrl(),
     process.env.LIVEKIT_API_KEY,
     process.env.LIVEKIT_API_SECRET,
   );
 }
 
 export async function listActiveRooms(): Promise<ActiveRoom[]> {
-  const client = getClient();
+  const client = getRoomServiceClient();
   const rooms = await client.listRooms();
   return rooms.map((r) => ({
     name: r.name,

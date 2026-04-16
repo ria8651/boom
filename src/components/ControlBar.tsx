@@ -20,9 +20,12 @@ interface ControlBarProps {
   pipSupported?: boolean;
   pipActive?: boolean;
   onTogglePip?: () => void;
+  recording?: boolean;
+  recordingPending?: boolean;
+  onToggleRecording?: () => void;
 }
 
-export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, screenShareSettings, onScreenShareSettingsChange, pipSupported, pipActive, onTogglePip }: ControlBarProps) {
+export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, screenShareSettings, onScreenShareSettingsChange, pipSupported, pipActive, onTogglePip, recording, recordingPending, onToggleRecording }: ControlBarProps) {
   const settingsRef = useRef<SettingsModalHandle>(null);
   const mic = useTrackToggle({ source: Track.Source.Microphone });
   const cam = useTrackToggle({ source: Track.Source.Camera });
@@ -140,6 +143,22 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
           <span className="btn-label">Popout</span>
         </button>
       )}
+
+      {/* Record */}
+      {onToggleRecording && (recordingPending ? (
+        <button className="control-btn control-btn--pending" disabled>
+          <SpinnerIcon />
+          <span className="btn-label">Record…</span>
+        </button>
+      ) : (
+        <button
+          className={`control-btn${recording ? " control-btn--recording" : ""}`}
+          onClick={onToggleRecording}
+        >
+          <RecordIcon />
+          <span className="btn-label">{recording ? "Stop rec" : "Record"}</span>
+        </button>
+      ))}
 
       {/* Leave */}
       <button
@@ -322,6 +341,14 @@ function LeaveIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
       <path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
+    </svg>
+  );
+}
+
+function RecordIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="12" cy="12" r="8" />
     </svg>
   );
 }

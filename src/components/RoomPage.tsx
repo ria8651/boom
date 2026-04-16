@@ -1,4 +1,4 @@
-import { LiveKitRoom, RoomAudioRenderer, useChat, useParticipants, useRoomContext } from "@livekit/components-react";
+import { LiveKitRoom, RoomAudioRenderer, useChat, useParticipants, useRoomContext, useRoomInfo } from "@livekit/components-react";
 import {
   DisconnectReason,
   MediaDeviceFailure,
@@ -43,6 +43,7 @@ function RoomInterior({
   onLayoutModeChange,
   screenShareSettings,
   onScreenShareSettingsChange,
+  roomName,
 }: {
   chatOpen: boolean;
   setChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -52,8 +53,34 @@ function RoomInterior({
   onLayoutModeChange: (mode: LayoutMode) => void;
   screenShareSettings: ScreenShareSettings;
   onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
+  roomName: string;
 }) {
   const room = useRoomContext();
+  const { metadata } = useRoomInfo();
+  const recording = (() => {
+    try { return JSON.parse(metadata ?? "{}").recording === true; } catch { return false; }
+  })();
+  const [recordingPending, setRecordingPending] = useState(false);
+
+  const handleToggleRecording = useCallback(async () => {
+    setRecordingPending(true);
+    try {
+      const endpoint = recording ? "/api/recordings/stop" : "/api/recordings/start";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room: roomName }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Request failed" }));
+        setRoomError(data.error ?? "Recording request failed");
+      }
+    } catch {
+      setRoomError("Failed to reach server for recording");
+    } finally {
+      setRecordingPending(false);
+    }
+  }, [recording, roomName, setRoomError]);
   // Update screen share encoding on the live room without triggering a reconnect
   useEffect(() => {
     if (room.options.publishDefaults) {
@@ -138,6 +165,12 @@ function RoomInterior({
       <div className="room">
         <div className="room-main">
           <div className="room-content">
+            {recording && (
+              <div className="recording-banner">
+                <span className="recording-dot" />
+                Recording
+              </div>
+            )}
             <div className="grid-area" ref={contentRef}>
               <VideoGrid containerWidth={gridSize.width} containerHeight={gridSize.height} layoutMode={layoutMode} />
             </div>
@@ -154,6 +187,9 @@ function RoomInterior({
                 pipSupported={pip.isSupported}
                 pipActive={pip.isActive}
                 onTogglePip={pip.isActive ? pip.close : pip.open}
+                recording={recording}
+                recordingPending={recordingPending}
+                onToggleRecording={handleToggleRecording}
               />
             </div>
           </div>
@@ -271,6 +307,7 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
         onLayoutModeChange={handleLayoutModeChange}
         screenShareSettings={screenShareSettings}
         onScreenShareSettingsChange={handleScreenShareSettingsChange}
+        roomName={connectionDetails.room}
       />
     </LiveKitRoom>
   );
