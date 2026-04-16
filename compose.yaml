@@ -1,6 +1,7 @@
 services:
   boom:
-    image: ${BOOM_IMAGE:-boom:latest}
+    build: .
+    image: boom:latest
     container_name: boom
     restart: unless-stopped
     ports:
