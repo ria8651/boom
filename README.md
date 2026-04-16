@@ -50,6 +50,14 @@ BOOM_ALLOWED_ORGS=my-org       # Comma-separated GitHub org slugs
 BOOM_SESSION_SECRET=...
 ```
 
+#### Generating a key pair
+
+```bash
+npm run generate-keys
+```
+
+Paste the output into `.env.local`.
+
 ### Development
 
 ```bash
