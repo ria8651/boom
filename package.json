@@ -10,7 +10,7 @@
     "test": "node --env-file=.env.local node_modules/.bin/playwright test",
     "test:unit": "vitest",
     "start": "NODE_ENV=production tsx server/index.ts",
-    "generate-keys": "node -e \"const c=require('crypto'); console.log('LIVEKIT_API_KEY=devkey-'+c.randomBytes(8).toString('hex')); console.log('LIVEKIT_API_SECRET='+c.randomBytes(32).toString('base64url'))\""
+    "generate-keys": "node -e \"const c=require('crypto'); console.log('LIVEKIT_API_KEY=devkey-'+c.randomBytes(8).toString('hex')); console.log('LIVEKIT_API_SECRET='+c.randomBytes(32).toString('base64url')); console.log('BOOM_SESSION_SECRET='+c.randomBytes(32).toString('base64url'))\""
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.20",

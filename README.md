@@ -56,7 +56,7 @@ BOOM_SESSION_SECRET=...
 npm run generate-keys
 ```
 
-Paste the output into `.env.local`. Both services in `compose.yaml` share these variables automatically.
+Paste the output into `.env.local`.
 
 ### Development
 
