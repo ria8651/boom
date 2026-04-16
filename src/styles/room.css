@@ -123,6 +123,15 @@
   height: 40%;
 }
 
+.participant-avatar {
+  width: 40%;
+  max-width: 128px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  opacity: 0.6;
+}
+
 .participant-wrapper {
   display: flex;
   flex-direction: column;
@@ -401,6 +410,7 @@ video:fullscreen {
   color: rgb(231, 231, 231);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
+  white-space: nowrap;
   font-family: "Open Sans", system-ui, sans-serif;
   font-size: 0.8125rem;
   cursor: pointer;
@@ -687,33 +697,6 @@ video:fullscreen {
 
 /* ── Error banner ────────────────────────────────────────────── */
 
-.error-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.5rem var(--room-pad);
-  color: #f91f31;
-  font-size: 0.875rem;
-  flex-shrink: 0;
-}
-
-.error-banner-text {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.error-banner button {
-  background: none;
-  border: none;
-  color: rgb(150, 150, 150);
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  flex-shrink: 0;
-}
 
 /* ── Settings dialog ───────────────────────────────────────────── */
 
@@ -926,9 +909,4 @@ video:fullscreen {
     object-fit: contain;
   }
 
-  .line-top::before,
-  .line-bottom::after {
-    left: 0.5rem;
-    right: 0.5rem;
-  }
 }

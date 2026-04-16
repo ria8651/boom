@@ -1,24 +1,17 @@
 import { test, expect } from "@playwright/test";
 
-const PASSWORD = process.env.BOOM_PASSWORD;
-
 test.describe("Live room join", () => {
-  test.skip(!PASSWORD, "Skipped: BOOM_PASSWORD not set in .env.local");
-
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
+    // Log in via dev bypass
+    await page.goto("/api/auth/dev");
+    await expect(page.locator("text=Active Rooms")).toBeVisible({ timeout: 10_000 });
   });
 
   test("joins a room and shows video conference UI", async ({ page }) => {
-    await page.locator('input[type="text"]').first().fill("playwright-test");
-    await page.locator('input[type="text"]').nth(1).fill("e2e-test-room");
-    await page.locator('input[type="password"]').fill(PASSWORD!);
-    await page.locator('button[type="submit"]').click();
+    await page.locator('input[placeholder="Room name"]').fill("e2e-test-room");
+    await page.locator("text=Create & Join").click();
 
-    // Should leave prejoin
-    await expect(page.locator("h1")).not.toBeVisible({ timeout: 15_000 });
-
-    // Wait for the room to fully connect — control bar appears
+    // Should leave lobby — control bar appears when room connects
     const controlBar = page.locator(".control-bar");
     await expect(controlBar).toBeVisible({ timeout: 15_000 });
 
@@ -49,11 +42,11 @@ test.describe("Live room join", () => {
     // Close chat
     await page.locator(".chat-close").click();
 
-    // Leave
+    // Leave — should return to lobby
     const leaveButton = page.locator(".control-btn--danger");
     await expect(leaveButton).toBeVisible();
     await leaveButton.click();
-    await expect(page.locator("h1")).toHaveText("boom", { timeout: 5_000 });
+    await expect(page.locator("text=Active Rooms")).toBeVisible({ timeout: 5_000 });
 
     await page.screenshot({
       path: "e2e/screenshots/live-after-leave.png",
