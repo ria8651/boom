@@ -2,7 +2,9 @@
 
 Video conferencing with end-to-end encryption, powered by LiveKit.
 
-![Join screen](docs/prejoin.png)
+![Auth](docs/auth.png)
+
+![Lobby](docs/lobby.png)
 
 ![In a room](docs/live-room.png)
 
@@ -10,13 +12,15 @@ Video conferencing with end-to-end encryption, powered by LiveKit.
 
 ## Features
 
+- **GitHub OAuth authentication** with allowlist (usernames and/or org membership)
+- **Room lobby** — browse active rooms with participant counts, create and join rooms
 - Aspect-aware tile packing — each tile sized to its stream's native aspect ratio, packed tightly with no grid
 - Pin mode — pin tiles to split the view with a resizable divider, both halves independently packed
 - Fullscreen video — click to watch a single stream in native fullscreen (Escape to exit)
 - Screen sharing with native aspect ratio preserved
 - Chat panel with unread message badge, multi-line input, resizable sidebar
 - Camera and microphone device switching
-- End-to-end encryption (password-based shared key)
+- GitHub avatars on video tiles when camera is off
 - Session persistence across page refreshes (auto-reconnect with fresh token)
 - Mobile responsive (container queries for icon-only controls, fullscreen chat overlay)
 - Accessible error handling (inline banners, device permission states on buttons)
@@ -28,38 +32,45 @@ Video conferencing with end-to-end encryption, powered by LiveKit.
 Copy `.env.example` to `.env.local` and fill in your values:
 
 ```bash
-LIVEKIT_API_KEY=...        # From your LiveKit server config
-LIVEKIT_API_SECRET=...     # From your LiveKit server config
-LIVEKIT_URL=wss://...      # Your LiveKit server WebSocket URL
-BOOM_PASSWORD=...          # Shared password for room access + E2EE
-PORT=3000                  # Server port (default 3000)
+LIVEKIT_API_KEY=...            # From your LiveKit server config
+LIVEKIT_API_SECRET=...         # From your LiveKit server config
+LIVEKIT_URL=wss://...          # Your LiveKit server WebSocket URL
+PORT=3000                      # Server port (default 3000)
+
+# GitHub OAuth (create at https://github.com/settings/developers)
+# Callback URL: http://localhost:3000/api/auth/github/callback
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
+
+# Access control — at least one must be set (fail closed if both empty)
+BOOM_ALLOWED_USERS=alice,bob   # Comma-separated GitHub usernames
+BOOM_ALLOWED_ORGS=my-org       # Comma-separated GitHub org slugs
+
+# Random string for signing session cookies
+BOOM_SESSION_SECRET=...
 ```
 
 ### Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Start the backend (in one terminal)
-npm run dev:server
-
-# Start the frontend (in another terminal)
 npm run dev
 ```
 
-The frontend runs on `http://localhost:5173` and proxies `/api` requests to the backend on port 3000. Both are accessible on your local network for testing on other devices.
+The unified dev server runs on `http://localhost:3000` with Vite HMR.
+
+In dev mode, a "continue in dev mode" link appears on the login page to bypass GitHub OAuth. You can specify a username via the input field.
 
 ### Testing
 
 ```bash
-# Run all tests (needs dev servers running)
+# Run all tests (needs dev server running on port 3000)
 npm test
 
 # Run with headed browser
 npm test -- --headed
 
-# Run only the live test (requires .env.local with valid credentials)
+# Run only the live test
 npm test -- e2e/live.spec.ts
 ```
 
@@ -85,12 +96,16 @@ boom:
     - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
     - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
     - LIVEKIT_URL=${LIVEKIT_URL}
-    - BOOM_PASSWORD=${BOOM_PASSWORD}
+    - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+    - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+    - BOOM_SESSION_SECRET=${BOOM_SESSION_SECRET}
+    - BOOM_ALLOWED_USERS=${BOOM_ALLOWED_USERS}
+    - BOOM_ALLOWED_ORGS=${BOOM_ALLOWED_ORGS}
 ```
 
 ## How it works
 
-Users enter a display name, room name, and password. The server validates the password and issues a LiveKit JWT token. The client connects to the LiveKit room with E2E encryption using the password as the shared key — even the server cannot decrypt audio/video content.
+Users sign in with GitHub. The server checks their username against the allowlist (and/or org membership). Authenticated users see a lobby of active rooms and can create or join rooms. The server issues a LiveKit JWT token for the chosen room.
 
 ## Future features
 
@@ -102,5 +117,3 @@ Users enter a display name, room name, and password. The server validates the pa
 - **Noise cancellation** — Krisp noise cancellation via LiveKit's audio processor
 - **Whiteboard** — shared canvas via data channels (tldraw/excalidraw integration)
 - **Participant list with roles** — metadata-driven role display + moderation controls
-- **Picture-in-picture** — Browser PiP API for video tracks
-- **Room list / lobby** — browse and join active rooms

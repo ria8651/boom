@@ -5,20 +5,24 @@ async function snap(page: import("@playwright/test").Page, name: string) {
   await page.screenshot({ path: `e2e/screenshots/${name}.png`, fullPage: true });
 }
 
+/** Log in via the dev bypass route and wait for the lobby to appear. */
+async function devLogin(page: import("@playwright/test").Page, user?: string) {
+  const url = user ? `/api/auth/dev?user=${encodeURIComponent(user)}` : "/api/auth/dev";
+  await page.goto(url);
+  await expect(page.locator("h1")).toHaveText("boom", { timeout: 10_000 });
+  await expect(page.locator(".lobby-rooms-heading")).toBeVisible({ timeout: 5_000 });
+}
+
 // ---------------------------------------------------------------------------
-// Pre-join page
+// Auth page
 // ---------------------------------------------------------------------------
 
-test.describe("PreJoinPage", () => {
-  test.beforeEach(async ({ page }) => {
+test.describe("AuthPage", () => {
+  test("renders sign-in page with GitHub button and dev bypass", async ({ page }) => {
     await page.goto("/");
-  });
-
-  test("renders the join form with correct theme", async ({ page }) => {
     await expect(page.locator("h1")).toHaveText("boom");
-    await expect(page.locator('input[type="text"]').first()).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toHaveText("Join");
+    await expect(page.locator("text=Sign in with GitHub")).toBeVisible();
+    await expect(page.locator("text=continue in dev mode")).toBeVisible();
 
     // Verify theme
     await page.waitForFunction(() => document.fonts.ready);
@@ -31,86 +35,104 @@ test.describe("PreJoinPage", () => {
     );
     expect(titleFont).toContain("Chivo");
 
-    await snap(page, "prejoin");
+    await snap(page, "auth-page");
   });
 
-  test("shows error on wrong password", async ({ page }) => {
-    await page.locator('input[type="text"]').first().fill("testuser");
-    await page.locator('input[type="text"]').nth(1).fill("testroom");
-    await page.locator('input[type="password"]').fill("wrong-password");
-    await page.locator('button[type="submit"]').click();
-
-    const error = page.locator("p").filter({ hasText: /password|error/i });
-    await expect(error).toBeVisible({ timeout: 10_000 });
-    await snap(page, "wrong-password");
+  test("shows error for unauthorized users", async ({ page }) => {
+    await page.goto("/?error=not_allowed");
+    await expect(page.locator("text=not on the allowed list")).toBeVisible();
+    await snap(page, "auth-not-allowed");
   });
 
-  test("shows error when server is unreachable", async ({ page }) => {
-    await page.route("**/api/token", (route) => route.abort("connectionrefused"));
-
-    await page.locator('input[type="text"]').first().fill("testuser");
-    await page.locator('input[type="text"]').nth(1).fill("testroom");
-    await page.locator('input[type="password"]').fill("anything");
-    await page.locator('button[type="submit"]').click();
-
-    const error = page.locator("p").filter({ hasText: /server|network|connect/i });
-    await expect(error).toBeVisible({ timeout: 10_000 });
-    await snap(page, "server-unreachable");
+  test("dev bypass logs in and redirects to lobby", async ({ page }) => {
+    await devLogin(page);
+    await expect(page.locator(".lobby-username")).toHaveText("dev");
+    await snap(page, "lobby-after-dev-login");
   });
 
-  test("shows server-side validation error (bad API key)", async ({ page }) => {
-    await page.route("**/api/token", (route) =>
-      route.fulfill({
-        status: 502,
-        contentType: "application/json",
-        body: JSON.stringify({
-          error:
-            "LiveKit server rejected the connection: invalid API key. Check your API key/secret and server configuration.",
-        }),
-      }),
-    );
+  test("dev bypass with custom username", async ({ page }) => {
+    await page.context().clearCookies();
+    await devLogin(page, "bob");
+    await expect(page.locator(".lobby-username")).toHaveText("bob");
+    await snap(page, "lobby-custom-dev-user");
+  });
 
-    await page.locator('input[type="text"]').first().fill("testuser");
-    await page.locator('input[type="text"]').nth(1).fill("testroom");
-    await page.locator('input[type="password"]').fill("anything");
-    await page.locator('button[type="submit"]').click();
+  test("switching dev user via logout", async ({ page }) => {
+    await page.context().clearCookies();
 
-    const error = page.locator("p").filter({ hasText: /API key/i });
-    await expect(error).toBeVisible({ timeout: 10_000 });
-    await snap(page, "invalid-api-key");
+    // Log in as first user
+    await devLogin(page, "user1");
+    await expect(page.locator(".lobby-username")).toHaveText("user1");
+
+    // Log out
+    await page.locator("text=Log out").click();
+    await expect(page.locator("text=Sign in with GitHub")).toBeVisible({ timeout: 5_000 });
+
+    // Log in as second user
+    await devLogin(page, "user2");
+    await expect(page.locator(".lobby-username")).toHaveText("user2");
+    await snap(page, "lobby-switched-user");
   });
 });
 
 // ---------------------------------------------------------------------------
-// localStorage persistence
+// Lobby page
 // ---------------------------------------------------------------------------
 
-test.describe("localStorage persistence", () => {
-  test("saves and restores display name and room", async ({ page }) => {
+test.describe("LobbyPage", () => {
+  test.beforeEach(async ({ page }) => {
+    await devLogin(page);
+  });
+
+  test("renders lobby with create room form and room list", async ({ page }) => {
+    await expect(page.locator('input[placeholder="Room name"]')).toBeVisible();
+    await expect(page.locator("text=Create & Join")).toBeVisible();
+    await expect(page.locator(".lobby-rooms-heading")).toHaveText("Active Rooms");
+    await snap(page, "lobby");
+  });
+
+
+  test("validates empty room name", async ({ page }) => {
+    await page.locator("text=Create & Join").click();
+    await expect(page.locator(".lobby-error")).toBeVisible();
+    await snap(page, "lobby-empty-room-error");
+  });
+
+  test("logout returns to auth page", async ({ page }) => {
+    await page.locator("text=Log out").click();
+    await expect(page.locator("text=Sign in with GitHub")).toBeVisible({ timeout: 5_000 });
+    await snap(page, "after-logout");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Room join from lobby (mocked token, connection will fail)
+// ---------------------------------------------------------------------------
+
+test.describe("Room join", () => {
+  test("joins a room from lobby and shows room page", async ({ page }) => {
+    await devLogin(page);
+
+    // Mock the token endpoint to return a fake token
     await page.route("**/api/token", (route) =>
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ token: "fake-token", serverUrl: "wss://fake.example.com" }),
+        body: JSON.stringify({
+          token: "fake-token",
+          serverUrl: "wss://fake.example.com",
+          identity: "dev",
+        }),
       }),
     );
 
-    await page.goto("/");
-    await page.locator('input[type="text"]').first().fill("alice");
-    await page.locator('input[type="text"]').nth(1).fill("my-room");
-    await page.locator('input[type="password"]').fill("pw");
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(500);
+    await page.locator('input[placeholder="Room name"]').fill("testroom");
+    await page.locator("text=Create & Join").click();
 
-    expect(await page.evaluate(() => localStorage.getItem("boom:displayName"))).toBe("alice");
-    expect(await page.evaluate(() => localStorage.getItem("boom:room"))).toBe("my-room");
-
-    // Reload — fields should be pre-filled, password should not
-    await page.goto("/");
-    expect(await page.locator('input[type="text"]').first().inputValue()).toBe("alice");
-    expect(await page.locator('input[type="text"]').nth(1).inputValue()).toBe("my-room");
-    expect(await page.locator('input[type="password"]').inputValue()).toBe("");
-    await snap(page, "restored-fields");
+    // Should eventually show an error (fake connection fails and returns to lobby)
+    // Could be a toast error or landing back on lobby
+    await expect(page.locator("h1")).toHaveText("boom", { timeout: 15_000 });
+    await snap(page, "room-connection-failed");
   });
 });
 
@@ -119,103 +141,75 @@ test.describe("localStorage persistence", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("Session persistence", () => {
-  test("saves session and restores it on refresh", async ({ page }) => {
+  test("auth session survives refresh", async ({ page }) => {
+    await devLogin(page);
+
+    // Reload — should still be on lobby (cookie persists)
+    await page.reload();
+    await expect(page.locator(".lobby-rooms-heading")).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator(".lobby-username")).toHaveText("dev");
+    await snap(page, "session-persists-after-reload");
+  });
+
+  test("room session is saved to localStorage on join", async ({ page }) => {
+    await devLogin(page);
+
+    // Mock token endpoint
     await page.route("**/api/token", (route) =>
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ token: "fake-token", serverUrl: "wss://fake.example.com" }),
+        body: JSON.stringify({
+          token: "fake-token",
+          serverUrl: "wss://fake.example.com",
+          identity: "dev",
+        }),
       }),
     );
 
-    await page.goto("/");
-    await page.locator('input[type="text"]').first().fill("testuser");
-    await page.locator('input[type="text"]').nth(1).fill("testroom");
-    await page.locator('input[type="password"]').fill("pw");
-    await page.locator('button[type="submit"]').click();
+    // Join a room — session gets saved, then fake connection fails and clears it
+    await page.locator('input[placeholder="Room name"]').fill("testroom");
+    await page.locator("text=Create & Join").click();
 
-    // Verify session was saved to localStorage
-    let savedSession = "";
-    await expect(async () => {
-      const s = await page.evaluate(() => localStorage.getItem("boom:session"));
-      expect(s).toBeTruthy();
-      savedSession = s!;
-    }).toPass({ timeout: 5_000 });
-
-    const parsed = JSON.parse(savedSession);
-    expect(parsed.token).toBe("fake-token");
-    expect(parsed.password).toBe("pw");
-    expect(parsed.room).toBe("testroom");
-    expect(parsed.identity).toBe("testuser");
-
-    // Wait for the app to settle (fake connection fails, returns to prejoin)
-    await expect(page.locator("h1")).toHaveText("boom", { timeout: 15_000 });
-    await snap(page, "session-restore-attempted");
+    // Session gets saved immediately on join, then cleared when connection fails
+    // Just verify we end up back on the lobby
+    await expect(page.locator(".lobby-rooms-heading")).toBeVisible({ timeout: 15_000 });
+    await snap(page, "session-after-failed-join");
   });
 
   test("clears session on leave", async ({ page }) => {
-    // Mock the token refresh endpoint (app will try to refresh on load)
-    await page.route("**/api/token", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ token: "fake-token-2", serverUrl: "wss://fake.example.com" }),
-      }),
-    );
+    await devLogin(page);
 
-    // Seed a session in localStorage
-    await page.goto("/");
+    // Seed a room session in localStorage
     await page.evaluate(() => {
       localStorage.setItem(
         "boom:session",
         JSON.stringify({
           token: "fake-token",
           serverUrl: "wss://fake.example.com",
-          password: "pw",
           room: "testroom",
-          identity: "testuser",
+          identity: "dev",
         }),
       );
     });
 
-    // Reload — app should restore session and try to connect
-    await page.reload();
-
-    // The fake connection will fail, kicking back to prejoin and clearing session
-    await expect(page.locator("h1")).toHaveText("boom", { timeout: 15_000 });
-    const session = await page.evaluate(() => localStorage.getItem("boom:session"));
-    expect(session).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Room page (mocked token, connection will fail)
-// ---------------------------------------------------------------------------
-
-test.describe("RoomPage", () => {
-  test("shows error when connection fails", async ({ page }) => {
-    // Mock the token endpoint to return a fake token that will fail validation
-    // or connection. Depending on whether the real server validates it,
-    // the error may appear on prejoin (server-side validation) or after
-    // entering the room (client-side WebSocket failure).
+    // Mock token refresh
     await page.route("**/api/token", (route) =>
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ token: "fake-token", serverUrl: "wss://fake.example.com" }),
+        body: JSON.stringify({
+          token: "fake-token-2",
+          serverUrl: "wss://fake.example.com",
+          identity: "dev",
+        }),
       }),
     );
 
-    await page.goto("/");
-    await page.locator('input[type="text"]').first().fill("testuser");
-    await page.locator('input[type="text"]').nth(1).fill("testroom");
-    await page.locator('input[type="password"]').fill("pw");
-    await page.locator('button[type="submit"]').click();
-
-    // Should eventually show an error (either on prejoin or after room failure)
-    const error = page.locator("p").filter({ hasText: /connect|disconnect|error|failed|server/i });
-    await expect(error).toBeVisible({ timeout: 15_000 });
-    await snap(page, "room-connection-failed");
+    // Reload — app restores session, fake connection fails, returns to lobby
+    await page.reload();
+    await expect(page.locator(".lobby-rooms-heading")).toBeVisible({ timeout: 15_000 });
+    const session = await page.evaluate(() => localStorage.getItem("boom:session"));
+    expect(session).toBeNull();
   });
 });
-

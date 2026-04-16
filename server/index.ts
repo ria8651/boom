@@ -1,11 +1,21 @@
-import crypto from "crypto";
 import express from "express";
+import cookieParser from "cookie-parser";
 import fs from "fs";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { AccessToken } from "livekit-server-sdk";
 import path from "path";
 import { fileURLToPath } from "url";
+import {
+  authMiddleware,
+  createSessionToken,
+  exchangeCode,
+  fetchGitHubUser,
+  getGitHubAuthUrl,
+  isUserAllowed,
+  SESSION_COOKIE_OPTIONS,
+} from "./auth.js";
+import { listActiveRooms } from "./rooms.js";
 
 const isDev = process.env.NODE_ENV === "development";
 const app = express();
@@ -19,14 +29,22 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: ["'self'", "wss:", "https:"],
-      imgSrc: ["'self'", "data:", "blob:"],
+      imgSrc: ["'self'", "data:", "blob:", "https://avatars.githubusercontent.com"],
       mediaSrc: ["'self'", "blob:"],
       workerSrc: ["'self'", "blob:"],
     },
   },
 }));
 
-// Rate limiting on token endpoint — 10 attempts per minute per IP
+// Rate limiting
+const authLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts. Try again in a minute." },
+});
+
 const tokenLimiter = rateLimit({
   windowMs: 60_000,
   max: 10,
@@ -39,42 +57,113 @@ const tokenLimiter = rateLimit({
 app.set("trust proxy", 1);
 
 app.use(express.json({ limit: "1kb" }));
+app.use(cookieParser());
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Timing-safe password comparison
-function checkPassword(input: string): boolean {
-  const expected = process.env.BOOM_PASSWORD ?? "";
-  if (input.length !== expected.length) return false;
-  return crypto.timingSafeEqual(
-    Buffer.from(input),
-    Buffer.from(expected),
-  );
-}
 
 // Input validation
 function isValidString(s: unknown, maxLen = 64): s is string {
   return typeof s === "string" && s.length > 0 && s.length <= maxLen;
 }
 
-// Token endpoint
-app.post("/api/token", tokenLimiter, async (req, res) => {
-  const { room, identity, password } = req.body;
+// --- Auth routes ---
 
-  if (!isValidString(room) || !isValidString(identity) || !isValidString(password, 128)) {
-    res.status(400).json({ error: "room, identity, and password are required" });
+app.get("/api/auth/github", authLimiter, (_req, res) => {
+  try {
+    res.redirect(getGitHubAuthUrl());
+  } catch (err) {
+    res.status(500).json({ error: "GitHub OAuth not configured" });
+  }
+});
+
+app.get("/api/auth/github/callback", authLimiter, async (req, res) => {
+  const code = req.query.code;
+  if (typeof code !== "string" || !code) {
+    res.redirect("/?error=missing_code");
     return;
   }
 
-  if (!checkPassword(password)) {
-    res.status(401).json({ error: "Invalid password" });
+  try {
+    const accessToken = await exchangeCode(code);
+    const ghUser = await fetchGitHubUser(accessToken);
+
+    if (!(await isUserAllowed(ghUser.login, accessToken))) {
+      res.redirect("/?error=not_allowed");
+      return;
+    }
+
+    const sessionToken = createSessionToken({
+      username: ghUser.login,
+      name: ghUser.name ?? ghUser.login,
+      avatar: ghUser.avatar_url,
+    });
+
+    res.cookie("boom_session", sessionToken, SESSION_COOKIE_OPTIONS);
+    res.redirect("/");
+  } catch (err) {
+    console.error("GitHub OAuth error:", err);
+    res.redirect("/?error=auth_failed");
+  }
+});
+
+// Dev-only: skip OAuth and log in as a test user (?user=alice to pick a name)
+if (isDev) {
+  app.get("/api/auth/dev", (req, res) => {
+    const username = typeof req.query.user === "string" && req.query.user
+      ? req.query.user.slice(0, 32)
+      : "dev";
+    const sessionToken = createSessionToken({
+      username,
+      name: username,
+      avatar: "",
+    });
+    res.cookie("boom_session", sessionToken, SESSION_COOKIE_OPTIONS);
+    res.redirect("/");
+  });
+}
+
+app.post("/api/auth/logout", (_req, res) => {
+  res.clearCookie("boom_session", { path: "/" });
+  res.json({ ok: true });
+});
+
+app.get("/api/auth/me", authMiddleware, (req, res) => {
+  res.json(req.user);
+});
+
+// --- Rooms ---
+
+app.get("/api/rooms", authMiddleware, async (_req, res) => {
+  try {
+    const rooms = await listActiveRooms();
+    res.json(rooms);
+  } catch (err) {
+    console.error("Failed to list rooms:", err);
+    res.status(500).json({ error: "Failed to list rooms" });
+  }
+});
+
+// --- LiveKit token ---
+
+app.post("/api/token", tokenLimiter, authMiddleware, async (req, res) => {
+  const { room } = req.body;
+
+  if (!isValidString(room)) {
+    res.status(400).json({ error: "room is required" });
     return;
   }
+
+  const identity = req.user!.username;
+  const displayName = req.user!.name;
 
   const token = new AccessToken(
     process.env.LIVEKIT_API_KEY,
     process.env.LIVEKIT_API_SECRET,
-    { identity, name: identity },
+    {
+      identity,
+      name: displayName,
+      metadata: JSON.stringify({ avatar: req.user!.avatar }),
+    },
   );
 
   token.addGrant({
@@ -90,18 +179,19 @@ app.post("/api/token", tokenLimiter, async (req, res) => {
   res.json({
     token: jwt,
     serverUrl: process.env.LIVEKIT_URL,
+    identity,
   });
 });
 
+// --- Static / Vite ---
+
 if (isDev) {
-  // In development, mount Vite's dev server as middleware for HMR + asset serving
   const { createServer } = await import("vite");
   const vite = await createServer({
     server: { middlewareMode: true },
     appType: "custom",
   });
   app.use(vite.middlewares);
-  // SPA fallback — serve index.html through Vite's transform pipeline
   app.get("/{*splat}", async (_req, res, next) => {
     try {
       const raw = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf-8");
@@ -112,7 +202,6 @@ if (isDev) {
     }
   });
 } else {
-  // In production, serve the built frontend
   const distPath = path.join(__dirname, "..", "dist");
   app.use(express.static(distPath));
   app.get("/{*splat}", (_req, res) => {

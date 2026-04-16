@@ -134,7 +134,15 @@ export function Tile({ trackRef, isFocused, onFocus, style, onResizeStart }: {
         {hasVideo && isTrackReference(trackRef) ? (
           <VideoTrack trackRef={trackRef} />
         ) : (
-          <div className="participant-placeholder"><PersonIcon /></div>
+          <div className="participant-placeholder">
+            {(() => {
+              try {
+                const meta = JSON.parse(trackRef.participant.metadata ?? "");
+                if (meta.avatar) return <img src={meta.avatar} alt="" className="participant-avatar" />;
+              } catch { /* no metadata */ }
+              return <PersonIcon />;
+            })()}
+          </div>
         )}
       </div>
       <div className="participant-info">

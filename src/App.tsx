@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ConnectionDetails } from "./types/connection";
-import PreJoinPage from "./components/PreJoinPage";
+import type { SessionUser } from "./types/auth";
+import AuthPage from "./components/AuthPage";
+import LobbyPage from "./components/LobbyPage";
 import RoomPage from "./components/RoomPage";
 import SimDebugPage from "./components/SimDebugPage";
 import "./styles/debug.css";
 
 const SESSION_KEY = "boom:session";
 
+
 function loadSession(): ConnectionDetails | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed.serverUrl && parsed.token && parsed.password && parsed.room && parsed.identity) {
+    if (parsed.serverUrl && parsed.token && parsed.room && parsed.identity) {
       return parsed;
     }
   } catch { /* ignore corrupt data */ }
@@ -27,35 +30,13 @@ function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-async function refreshToken(session: ConnectionDetails): Promise<ConnectionDetails | null> {
-  try {
-    const res = await fetch("/api/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        room: session.room,
-        identity: session.identity,
-        password: session.password,
-      }),
-    });
-    if (!res.ok) {
-      clearSession();
-      return null;
-    }
-    const { token, serverUrl } = await res.json();
-    const newSession: ConnectionDetails = { ...session, token, serverUrl };
-    saveSession(newSession);
-    return newSession;
-  } catch {
-    clearSession();
-    return null;
-  }
-}
+type AppView = "loading" | "auth" | "lobby" | "room";
 
 function App() {
+  const [view, setView] = useState<AppView>("loading");
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | null>(null);
   const [error, setError] = useState("");
-  const [restoring, setRestoring] = useState(true);
   const [, setPath] = useState(window.location.pathname);
 
   useEffect(() => {
@@ -64,42 +45,112 @@ function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // Warn before closing the tab while in an active session
+  // Warn before closing the tab while in an active room
   useEffect(() => {
-    if (!connectionDetails) return;
+    if (view !== "room") return;
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [connectionDetails]);
+  }, [view]);
 
-  // On mount, try to restore session with a fresh token
+  // On mount: check auth, then optionally restore room session
   useEffect(() => {
-    const session = loadSession();
-    if (!session) {
-      setRestoring(false);
-      return;
-    }
-    refreshToken(session).then((details) => {
-      if (details) setConnectionDetails(details);
-      setRestoring(false);
-    });
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) {
+          setView("auth");
+          return;
+        }
+        const me: SessionUser = await res.json();
+        setUser(me);
+
+        // Try restoring an active room session
+        const session = loadSession();
+        if (session) {
+          // Refresh the LiveKit token
+          try {
+            const tokenRes = await fetch("/api/token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ room: session.room }),
+            });
+            if (tokenRes.ok) {
+              const { token, serverUrl, identity } = await tokenRes.json();
+              const restored: ConnectionDetails = {
+                ...session,
+                token,
+                serverUrl,
+                identity,
+              };
+              saveSession(restored);
+              setConnectionDetails(restored);
+              setView("room");
+              return;
+            }
+          } catch {
+            // Token refresh failed, fall through to lobby
+          }
+          clearSession();
+        }
+
+        setView("lobby");
+      } catch {
+        setView("auth");
+      }
+    })();
   }, []);
+
+  const handleJoinRoom = useCallback(async (room: string) => {
+    try {
+      const res = await fetch("/api/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(data?.error ?? `Failed to join room (${res.status})`);
+        return;
+      }
+
+      const { token, serverUrl, identity } = await res.json();
+      const details: ConnectionDetails = {
+        serverUrl,
+        token,
+        room,
+        identity,
+      };
+      saveSession(details);
+      setError("");
+      setConnectionDetails(details);
+      setView("room");
+    } catch (err) {
+      setError(
+        `Could not reach the server. (${err instanceof Error ? err.message : String(err)})`,
+      );
+    }
+  }, [user]);
 
   const handleLeave = useCallback((message?: string) => {
     clearSession();
     setConnectionDetails(null);
     setError(message ?? "");
+    setView("lobby");
   }, []);
 
-  const handleJoin = useCallback((details: ConnectionDetails) => {
-    saveSession(details);
-    setError("");
-    setConnectionDetails(details);
+  const handleLogout = useCallback(() => {
+    clearSession();
+    setConnectionDetails(null);
+    setUser(null);
+    setView("auth");
+    fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
   }, []);
 
-  if (restoring) return null;
+  if (view === "loading") return null;
 
   // /debug route — simulation debugger
   if (window.location.pathname === "/debug") {
@@ -113,19 +164,31 @@ function App() {
     );
   }
 
-  return (
-    <div style={{ height: "100%" }}>
-      {connectionDetails ? (
+  if (view === "auth") {
+    return <AuthPage />;
+  }
+
+  if (view === "room" && connectionDetails) {
+    return (
+      <div style={{ height: "100%" }}>
         <RoomPage
           connectionDetails={connectionDetails}
           onLeave={handleLeave}
         />
-      ) : (
-        <PreJoinPage
-          onJoin={handleJoin}
-          error={error}
-          onError={setError}
-        />
+      </div>
+    );
+  }
+
+  // Lobby (default for authenticated users)
+  return (
+    <div style={{ height: "100%" }}>
+      <LobbyPage
+        user={user!}
+        onJoinRoom={handleJoinRoom}
+        onLogout={handleLogout}
+      />
+      {error && (
+        <div className="error-banner error-banner--toast">{error}</div>
       )}
     </div>
   );

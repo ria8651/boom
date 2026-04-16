@@ -1,7 +1,6 @@
 import { LiveKitRoom, RoomAudioRenderer, useChat, useParticipants } from "@livekit/components-react";
 import {
   DisconnectReason,
-  ExternalE2EEKeyProvider,
   MediaDeviceFailure,
   ScreenSharePresets,
   VideoPreset,
@@ -23,12 +22,6 @@ interface RoomPageProps {
   onLeave: (message?: string) => void;
 }
 
-const worker =
-  typeof Worker !== "undefined"
-    ? new Worker(new URL("livekit-client/e2ee-worker", import.meta.url), {
-        type: "module",
-      })
-    : undefined;
 
 function RoomInterior({
   chatOpen,
@@ -155,7 +148,6 @@ function RoomInterior({
 }
 
 export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) {
-  const [keyProvider] = useState(() => new ExternalE2EEKeyProvider());
   const [roomError, setRoomError] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(
@@ -178,10 +170,6 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
     localStorage.setItem("boom-screenshare-settings", JSON.stringify(settings));
   }, []);
 
-  useMemo(() => {
-    keyProvider.setKey(connectionDetails.password);
-  }, [keyProvider, connectionDetails.password]);
-
   const roomOptions = useMemo((): RoomOptions => {
     const customPresets: Record<string, VideoPreset> = {
       h720fps60: new VideoPreset(1280, 720, 3_000_000, 60, "medium"),
@@ -190,19 +178,13 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
     const preset = customPresets[screenShareSettings.preset]
       ?? ScreenSharePresets[screenShareSettings.preset as keyof typeof ScreenSharePresets]
       ?? ScreenSharePresets.h1080fps30;
-    const opts: RoomOptions = {
-      // Don't auto-disconnect on beforeunload — we handle this ourselves
-      // so the browser's "Leave site?" Cancel button actually works.
+    return {
       disconnectOnPageLeave: false,
       publishDefaults: {
         screenShareEncoding: preset.encoding,
       },
     };
-    if (worker) {
-      opts.e2ee = { keyProvider, worker };
-    }
-    return opts;
-  }, [keyProvider, screenShareSettings.preset]);
+  }, [screenShareSettings.preset]);
 
   const handleDisconnected = useCallback(
     (reason?: DisconnectReason) => {
@@ -255,12 +237,6 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
     [],
   );
 
-  const handleEncryptionError = useCallback((error: Error) => {
-    setRoomError(
-      `End-to-end encryption error: ${error.message}. ` +
-      "Make sure all participants are using the same password.",
-    );
-  }, []);
 
   return (
     <LiveKitRoom
@@ -272,7 +248,6 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
       onDisconnected={handleDisconnected}
       onError={handleError}
       onMediaDeviceFailure={handleMediaDeviceFailure}
-      onEncryptionError={handleEncryptionError}
       options={roomOptions}
       style={{ height: "100%" }}
     >
