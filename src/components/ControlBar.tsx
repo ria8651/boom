@@ -5,7 +5,7 @@ import {
   useLocalParticipant,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LayoutMode } from "../layout/types.js";
 import SettingsModal, { type SettingsModalHandle, type ScreenShareSettings } from "./SettingsModal.js";
 
@@ -20,9 +20,10 @@ interface ControlBarProps {
   pipSupported?: boolean;
   pipActive?: boolean;
   onTogglePip?: () => void;
+  onInvite?: () => Promise<string>;
 }
 
-export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, screenShareSettings, onScreenShareSettingsChange, pipSupported, pipActive, onTogglePip }: ControlBarProps) {
+export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, screenShareSettings, onScreenShareSettingsChange, pipSupported, pipActive, onTogglePip, onInvite }: ControlBarProps) {
   const settingsRef = useRef<SettingsModalHandle>(null);
   const mic = useTrackToggle({ source: Track.Source.Microphone });
   const cam = useTrackToggle({ source: Track.Source.Camera });
@@ -123,6 +124,9 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
         <span className="btn-label">Chat</span>
         {unreadChat > 0 && <span className="chat-badge">{unreadChat}</span>}
       </button>
+
+      {/* Invite */}
+      {onInvite && <InviteButton onInvite={onInvite} />}
 
       {/* Settings */}
       <button
@@ -331,5 +335,74 @@ function SettingsIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
       <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z" />
     </svg>
+  );
+}
+
+function InviteIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" />
+    </svg>
+  );
+}
+
+function InviteButton({ onInvite }: { onInvite: () => Promise<string> }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [url, setUrl] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleOpen = async () => {
+    setLoading(true);
+    try {
+      const inviteUrl = await onInvite();
+      setUrl(inviteUrl);
+      setCopied(false);
+      dialogRef.current?.showModal();
+    } catch {
+      // API error — silently fail
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      ta.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    setCopied(true);
+  }, [url]);
+
+  return (
+    <>
+      <button className="control-btn" onClick={handleOpen} disabled={loading}>
+        <InviteIcon />
+        <span className="btn-label">Invite</span>
+      </button>
+      <dialog ref={dialogRef} className="invite-dialog">
+        <p>Share this link to invite someone:</p>
+        <input
+          type="text"
+          className="invite-url-input"
+          value={url}
+          readOnly
+          onClick={(e) => (e.target as HTMLInputElement).select()}
+        />
+        <div className="invite-dialog-actions">
+          <button className="invite-dialog-btn" onClick={() => dialogRef.current?.close()}>Close</button>
+          <button className="invite-dialog-btn invite-dialog-btn--primary" onClick={handleCopy}>
+            {copied ? "Copied!" : "Copy link"}
+          </button>
+        </div>
+      </dialog>
+    </>
   );
 }

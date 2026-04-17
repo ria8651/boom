@@ -863,6 +863,69 @@ video:fullscreen {
   border-color: transparent;
 }
 
+/* ── Invite dialog ───────────────────────────────────────────── */
+
+.invite-dialog {
+  background: rgb(34, 34, 34);
+  color: rgb(220, 220, 220);
+  border: 1px solid rgb(60, 60, 60);
+  border-radius: 8px;
+  padding: 1.25rem;
+  min-width: 340px;
+  max-width: 480px;
+  font-family: "Open Sans", system-ui, sans-serif;
+}
+
+.invite-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.invite-dialog p {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.invite-url-input {
+  width: 100%;
+  background: rgb(24, 24, 24);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 0.625rem 0.75rem;
+  color: rgb(200, 200, 200);
+  font-size: 0.8125rem;
+  font-family: monospace;
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+}
+
+.invite-url-input:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.invite-dialog-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.invite-dialog-btn {
+  background: rgb(50, 50, 50);
+  color: rgb(220, 220, 220);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-family: "Chivo", sans-serif;
+  cursor: pointer;
+}
+
+.invite-dialog-btn--primary {
+  background: #10c2ee;
+  color: #fff;
+  border-color: transparent;
+}
+
 /* ── Mobile ──────────────────────────────────────────────────── */
 
 /* Hide button labels when control bar is narrow (chat open, small screen) */
