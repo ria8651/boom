@@ -31,6 +31,7 @@ function resolveScreenSharePreset(key: string): VideoPreset {
 interface RoomPageProps {
   connectionDetails: ConnectionDetails;
   onLeave: (message?: string) => void;
+  onInvite?: () => Promise<string>;
 }
 
 
@@ -43,6 +44,7 @@ function RoomInterior({
   onLayoutModeChange,
   screenShareSettings,
   onScreenShareSettingsChange,
+  onInvite,
 }: {
   chatOpen: boolean;
   setChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -52,6 +54,7 @@ function RoomInterior({
   onLayoutModeChange: (mode: LayoutMode) => void;
   screenShareSettings: ScreenShareSettings;
   onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
+  onInvite?: () => Promise<string>;
 }) {
   const room = useRoomContext();
   // Update screen share encoding on the live room without triggering a reconnect
@@ -154,6 +157,7 @@ function RoomInterior({
                 pipSupported={pip.isSupported}
                 pipActive={pip.isActive}
                 onTogglePip={pip.isActive ? pip.close : pip.open}
+                onInvite={onInvite}
               />
             </div>
           </div>
@@ -166,7 +170,7 @@ function RoomInterior({
   );
 }
 
-export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) {
+export default function RoomPage({ connectionDetails, onLeave, onInvite }: RoomPageProps) {
   const [roomError, setRoomError] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(
@@ -271,6 +275,7 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
         onLayoutModeChange={handleLayoutModeChange}
         screenShareSettings={screenShareSettings}
         onScreenShareSettingsChange={handleScreenShareSettingsChange}
+        onInvite={onInvite}
       />
     </LiveKitRoom>
   );

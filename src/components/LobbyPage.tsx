@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SessionUser } from "../types/auth";
 
 interface ActiveRoom {
@@ -57,6 +57,42 @@ export default function LobbyPage({ user, onJoinRoom, onLogout }: LobbyPageProps
     onJoinRoom(roomName);
   };
 
+  const inviteDialogRef = useRef<HTMLDialogElement>(null);
+  const [inviteUrl, setInviteUrl] = useState("");
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const handleShowInvite = async (roomName: string) => {
+    try {
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room: roomName }),
+      });
+      if (!res.ok) return;
+      const { inviteToken } = await res.json();
+      setInviteUrl(`${window.location.origin}/?invite=${inviteToken}`);
+      setInviteCopied(false);
+      inviteDialogRef.current?.showModal();
+    } catch {
+      // Silently fail
+    }
+  };
+
+  const handleCopyInvite = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = inviteUrl;
+      ta.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    setInviteCopied(true);
+  };
+
   return (
     <div className="page-wrapper">
       <div className="page-card page-card--wide">
@@ -113,6 +149,13 @@ export default function LobbyPage({ user, onJoinRoom, onLogout }: LobbyPageProps
                   </span>
                   <button
                     type="button"
+                    className="lobby-invite-btn"
+                    onClick={() => handleShowInvite(room.name)}
+                  >
+                    Invite
+                  </button>
+                  <button
+                    type="button"
                     className="lobby-join-btn lobby-join-btn--small"
                     onClick={() => handleJoin(room.name)}
                   >
@@ -123,6 +166,23 @@ export default function LobbyPage({ user, onJoinRoom, onLogout }: LobbyPageProps
             </ul>
           )}
         </section>
+
+        <dialog ref={inviteDialogRef} className="invite-dialog">
+          <p>Share this link to invite someone:</p>
+          <input
+            type="text"
+            className="invite-url-input"
+            value={inviteUrl}
+            readOnly
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+          />
+          <div className="invite-dialog-actions">
+            <button className="invite-dialog-btn" onClick={() => inviteDialogRef.current?.close()}>Close</button>
+            <button className="invite-dialog-btn invite-dialog-btn--primary" onClick={handleCopyInvite}>
+              {inviteCopied ? "Copied!" : "Copy link"}
+            </button>
+          </div>
+        </dialog>
       </div>
     </div>
   );
