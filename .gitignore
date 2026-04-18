@@ -3,6 +3,7 @@ dist
 .env*
 !.env.example
 .claude/settings.local.json
+.claude/worktrees/
 e2e/screenshots
 e2e/results
 test-results
