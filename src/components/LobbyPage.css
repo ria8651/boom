@@ -75,10 +75,13 @@
   font-weight: var(--weight-semibold);
   white-space: nowrap;
   cursor: pointer;
+  box-shadow: var(--shadow-button);
+  transition: background var(--motion-hover), box-shadow var(--motion-hover);
 }
 
 .lobby-join-btn:hover {
   background: var(--accent-hover);
+  box-shadow: var(--shadow-button-hover);
 }
 
 .lobby-join-btn--small {

@@ -20,6 +20,8 @@ interface ControlBarProps {
   onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
   theme: ThemeName;
   onThemeChange: (theme: ThemeName) => void;
+  accent: string | null;
+  onAccentChange: (accent: string | null) => void;
   pipSupported?: boolean;
   pipActive?: boolean;
   onTogglePip?: () => void;
@@ -33,7 +35,7 @@ function cx(...parts: (string | false | undefined | null)[]): string {
   return parts.filter(Boolean).join(" ");
 }
 
-export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, screenShareSettings, onScreenShareSettingsChange, theme, onThemeChange, pipSupported, pipActive, onTogglePip, recording, recordingPending, onToggleRecording, onInvite }: ControlBarProps) {
+export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, screenShareSettings, onScreenShareSettingsChange, theme, onThemeChange, accent, onAccentChange, pipSupported, pipActive, onTogglePip, recording, recordingPending, onToggleRecording, onInvite }: ControlBarProps) {
   const settingsRef = useRef<SettingsModalHandle>(null);
   const mic = useTrackToggle({ source: Track.Source.Microphone });
   const cam = useTrackToggle({ source: Track.Source.Camera });
@@ -207,6 +209,8 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
         onScreenShareSettingsChange={onScreenShareSettingsChange}
         theme={theme}
         onThemeChange={onThemeChange}
+        accent={accent}
+        onAccentChange={onAccentChange}
       />
     </div>
   );

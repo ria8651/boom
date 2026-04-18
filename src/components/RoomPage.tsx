@@ -36,6 +36,8 @@ interface RoomPageProps {
   onLeave: (message?: string) => void;
   theme: ThemeName;
   onThemeChange: (theme: ThemeName) => void;
+  accent: string | null;
+  onAccentChange: (accent: string | null) => void;
   onInvite?: () => Promise<string>;
 }
 
@@ -52,6 +54,8 @@ function RoomInterior({
   roomName,
   theme,
   onThemeChange,
+  accent,
+  onAccentChange,
   onInvite,
 }: {
   chatOpen: boolean;
@@ -65,6 +69,8 @@ function RoomInterior({
   roomName: string;
   theme: ThemeName;
   onThemeChange: (theme: ThemeName) => void;
+  accent: string | null;
+  onAccentChange: (accent: string | null) => void;
   onInvite?: () => Promise<string>;
 }) {
   const room = useRoomContext();
@@ -231,6 +237,8 @@ function RoomInterior({
                 onScreenShareSettingsChange={onScreenShareSettingsChange}
                 theme={theme}
                 onThemeChange={onThemeChange}
+                accent={accent}
+                onAccentChange={onAccentChange}
                 pipSupported={pip.isSupported}
                 pipActive={pip.isActive}
                 onTogglePip={pip.isActive ? pip.close : pip.open}
@@ -250,7 +258,7 @@ function RoomInterior({
   );
 }
 
-export default function RoomPage({ connectionDetails, onLeave, theme, onThemeChange, onInvite }: RoomPageProps) {
+export default function RoomPage({ connectionDetails, onLeave, theme, onThemeChange, accent, onAccentChange, onInvite }: RoomPageProps) {
   const [roomError, setRoomError] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(
@@ -358,6 +366,8 @@ export default function RoomPage({ connectionDetails, onLeave, theme, onThemeCha
         roomName={connectionDetails.room}
         theme={theme}
         onThemeChange={onThemeChange}
+        accent={accent}
+        onAccentChange={onAccentChange}
         onInvite={onInvite}
       />
     </LiveKitRoom>

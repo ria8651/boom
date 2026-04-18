@@ -8,7 +8,9 @@
   width: var(--chat-width);
   min-width: 260px;
   max-width: 75vw;
-  background: var(--bg-page);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-raised);
+  z-index: 1;
 }
 
 .chat-panel--hidden {

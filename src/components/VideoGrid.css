@@ -22,8 +22,11 @@
   min-height: 0;
   overflow: hidden;
   background: var(--bg-tile);
-  border: var(--stroke-tile-speaking) solid var(--border-default);
+  border: var(--stroke-default) solid var(--border-default);
   border-radius: var(--radius-tile);
+  /* Two-layer shadow: baseline elevation (theme) + speaking glow
+     (set inline on the element via --tile-shadow-speaking). */
+  box-shadow: var(--shadow-tile), var(--tile-shadow-speaking, 0 0 #0000);
 }
 
 .participant-tile video {

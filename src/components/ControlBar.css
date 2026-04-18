@@ -9,6 +9,9 @@
   padding: var(--room-pad);
   overflow: hidden;
   position: relative;
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-raised);
+  z-index: 1;
 }
 
 /* Inset top line */
@@ -43,11 +46,13 @@
   font-size: var(--text-sm);
   white-space: nowrap;
   cursor: pointer;
-  transition: background var(--motion-hover);
+  box-shadow: var(--shadow-button);
+  transition: background var(--motion-hover), box-shadow var(--motion-hover);
 }
 
 .control-btn:hover {
   background: var(--bg-button-hover);
+  box-shadow: var(--shadow-button-hover);
 }
 
 .control-btn--muted {

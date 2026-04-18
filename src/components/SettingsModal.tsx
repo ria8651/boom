@@ -1,5 +1,6 @@
 import { useRef, useImperativeHandle, forwardRef } from "react";
 import type { LayoutMode } from "../layout/types.js";
+import Dropdown from "./Dropdown";
 import "./SettingsModal.css";
 
 export type ContentHint = "" | "text" | "detail" | "motion";
@@ -9,7 +10,7 @@ export interface ScreenShareSettings {
   contentHint: ContentHint;
 }
 
-export type ThemeName = "default" | "terminal";
+export type ThemeName = "default" | "classic-light" | "terminal" | "material";
 
 interface SettingsModalProps {
   layoutMode: LayoutMode;
@@ -18,6 +19,8 @@ interface SettingsModalProps {
   onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
   theme: ThemeName;
   onThemeChange: (theme: ThemeName) => void;
+  accent: string | null;
+  onAccentChange: (accent: string | null) => void;
 }
 
 export interface SettingsModalHandle {
@@ -46,12 +49,20 @@ const contentHints = [
 
 const themes: { value: ThemeName; label: string; description: string }[] = [
   { value: "default", label: "Classic", description: "Dark slate with cyan accent" },
+  { value: "classic-light", label: "Classic Light", description: "Light slate with cyan accent" },
   { value: "terminal", label: "Terminal", description: "Green-phosphor CRT" },
+  { value: "material", label: "Material", description: "Material Design purple" },
 ];
 
 const SettingsModal = forwardRef<SettingsModalHandle, SettingsModalProps>(
-  function SettingsModal({ layoutMode, onChange, screenShareSettings, onScreenShareSettingsChange, theme, onThemeChange }, ref) {
+  function SettingsModal({ layoutMode, onChange, screenShareSettings, onScreenShareSettingsChange, theme, onThemeChange, accent, onAccentChange }, ref) {
     const dialogRef = useRef<HTMLDialogElement>(null);
+    // For the color picker: show the current accent (override or theme default).
+    // Re-read computed style each render so switching themes updates the swatch.
+    const currentAccent = accent
+      ?? (typeof window !== "undefined"
+        ? getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#10c2ee"
+        : "#10c2ee");
 
     useImperativeHandle(ref, () => ({
       showModal: () => dialogRef.current?.showModal(),
@@ -94,57 +105,56 @@ const SettingsModal = forwardRef<SettingsModalHandle, SettingsModalProps>(
 
           <fieldset className="settings-section">
             <legend>Theme</legend>
-            {themes.map((t) => (
-              <label key={t.value} className="settings-radio">
-                <input
-                  type="radio"
-                  name="theme"
-                  value={t.value}
-                  checked={theme === t.value}
-                  onChange={() => onThemeChange(t.value)}
-                />
-                <span className="settings-radio-text">
-                  <strong className="settings-radio-label">{t.label}</strong>
-                  <small className="settings-radio-hint">{t.description}</small>
-                </span>
-              </label>
-            ))}
+            <Dropdown value={theme} options={themes} onChange={onThemeChange} ariaLabel="Theme" />
+          </fieldset>
+
+          <fieldset className="settings-section">
+            <legend>Accent color</legend>
+            <div className="settings-accent-row">
+              <input
+                type="color"
+                className="settings-accent-input"
+                value={currentAccent}
+                onChange={(e) => onAccentChange(e.target.value)}
+                aria-label="Accent color"
+              />
+              <span className="settings-accent-label">{currentAccent}</span>
+              {accent && (
+                <button
+                  type="button"
+                  className="settings-accent-reset"
+                  onClick={() => onAccentChange(null)}
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </fieldset>
 
           <fieldset className="settings-section">
             <legend>Screen share quality</legend>
-            <label className="settings-select-label">
-              Resolution / frame rate
-              <select
-                className="settings-select"
+            <div className="settings-dropdown-row">
+              <span className="settings-dropdown-label">Resolution / frame rate</span>
+              <Dropdown
                 value={screenShareSettings.preset}
-                onChange={(e) =>
-                  onScreenShareSettingsChange({ ...screenShareSettings, preset: e.target.value })
+                options={screenSharePresets}
+                onChange={(preset) =>
+                  onScreenShareSettingsChange({ ...screenShareSettings, preset })
                 }
-              >
-                {screenSharePresets.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label} — {p.description}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="settings-select-label">
-              Content type
-              <select
-                className="settings-select"
+                ariaLabel="Resolution / frame rate"
+              />
+            </div>
+            <div className="settings-dropdown-row">
+              <span className="settings-dropdown-label">Content type</span>
+              <Dropdown
                 value={screenShareSettings.contentHint}
-                onChange={(e) =>
-                  onScreenShareSettingsChange({ ...screenShareSettings, contentHint: e.target.value as ContentHint })
+                options={contentHints}
+                onChange={(contentHint) =>
+                  onScreenShareSettingsChange({ ...screenShareSettings, contentHint: contentHint as ContentHint })
                 }
-              >
-                {contentHints.map((h) => (
-                  <option key={h.value} value={h.value}>
-                    {h.label} — {h.description}
-                  </option>
-                ))}
-              </select>
-            </label>
+                ariaLabel="Content type"
+              />
+            </div>
           </fieldset>
 
           <button type="submit" className="settings-close-btn">

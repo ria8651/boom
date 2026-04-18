@@ -8,6 +8,7 @@
   color: var(--text-secondary);
   border: var(--stroke-default) solid var(--border-dialog);
   border-radius: var(--radius-dialog);
+  box-shadow: var(--shadow-dialog);
 }
 
 .settings-title {
@@ -70,6 +71,65 @@
   font-size: var(--text-xs);
 }
 
+.settings-dropdown-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-5);
+}
+
+.settings-dropdown-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.settings-accent-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-2) var(--space-5);
+}
+
+.settings-accent-input {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: var(--stroke-default) solid var(--border-default);
+  border-radius: var(--radius-badge);
+  cursor: pointer;
+}
+
+.settings-accent-input::-webkit-color-swatch {
+  border: none;
+  border-radius: var(--radius-badge);
+}
+
+.settings-accent-input::-moz-color-swatch {
+  border: none;
+  border-radius: var(--radius-badge);
+}
+
+.settings-accent-label {
+  color: var(--text-secondary);
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: var(--text-sm);
+}
+
+.settings-accent-reset {
+  margin-left: auto;
+  padding: var(--space-2) var(--space-5);
+  background: none;
+  color: var(--text-accent);
+  border: none;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.settings-accent-reset:hover {
+  color: var(--text-accent-hover);
+}
+
 .settings-select-label {
   display: flex;
   flex-direction: column;
@@ -110,11 +170,13 @@
   border-radius: var(--radius-radio);
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background var(--motion-hover);
+  box-shadow: var(--shadow-button);
+  transition: background var(--motion-hover), box-shadow var(--motion-hover);
 }
 
 .settings-close-btn:hover {
   background: var(--bg-button-secondary-hover);
+  box-shadow: var(--shadow-button-hover);
 }
 
 /* ── Leave-confirmation dialog ───────────────────────────────── */

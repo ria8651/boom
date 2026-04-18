@@ -80,7 +80,6 @@ export function Tile({ trackRef, isFocused, onFocus, style, onResizeStart }: {
   const SPEAKING_THRESHOLD = 0.5;
   const SMOOTHING_UP = 0.2;
   const SMOOTHING_DOWN = 0.1;
-  const MAX_GLOW = 12; // max blur radius in px
   const micTrack = !isScreenShare
     ? trackRef.participant?.getTrackPublication(Track.Source.Microphone)?.track
     : undefined;
@@ -134,8 +133,12 @@ export function Tile({ trackRef, isFocused, onFocus, style, onResizeStart }: {
         ref={tileRef}
         className={`participant-tile${isScreenShare ? " participant-tile--screenshare" : ""}`}
         style={{
-          borderColor: `rgba(${Math.round(255 + (16 - 255) * audioIntensity)}, ${Math.round(255 + (194 - 255) * audioIntensity)}, ${Math.round(255 + (238 - 255) * audioIntensity)}, ${(0.08 + audioIntensity * 0.92).toFixed(2)})`,
-          boxShadow: audioIntensity > 0 ? `0 0 ${audioIntensity * MAX_GLOW}px rgba(16, 194, 238, ${(audioIntensity * 0.4).toFixed(2)})` : "none",
+          borderColor: audioIntensity > 0
+            ? `rgb(var(--accent-rgb) / ${(0.08 + audioIntensity * 0.92).toFixed(2)})`
+            : undefined,
+          ["--tile-shadow-speaking" as never]: audioIntensity > 0
+            ? `0 0 calc(var(--tile-speaking-glow) * ${audioIntensity.toFixed(2)}) rgb(var(--accent-rgb) / ${(audioIntensity * 0.4).toFixed(2)})`
+            : undefined,
         }}
       >
         {hasVideo && isTrackReference(trackRef) ? (

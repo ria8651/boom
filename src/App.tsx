@@ -53,9 +53,41 @@ function clearSession() {
 
 type AppView = "loading" | "auth" | "lobby" | "room" | "guest" | "recordings";
 
+const THEME_NAMES: readonly ThemeName[] = ["default", "classic-light", "terminal", "material"];
+
 function loadTheme(): ThemeName {
   const stored = localStorage.getItem("boom-theme");
-  return stored === "terminal" ? "terminal" : "default";
+  if (stored && (THEME_NAMES as readonly string[]).includes(stored)) return stored as ThemeName;
+  return "default";
+}
+
+function loadAccent(theme: ThemeName): string | null {
+  const v = localStorage.getItem(`boom-accent-${theme}`);
+  return v && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null;
+}
+
+function hexToRgbTriplet(hex: string): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `${r} ${g} ${b}`;
+}
+
+function applyAccent(accent: string | null) {
+  const root = document.documentElement;
+  const props = ["--accent", "--accent-hover", "--accent-rgb", "--border-accent", "--text-accent", "--text-accent-hover"];
+  if (!accent) {
+    for (const p of props) root.style.removeProperty(p);
+    return;
+  }
+  const hover = `color-mix(in srgb, ${accent}, white 18%)`;
+  root.style.setProperty("--accent", accent);
+  root.style.setProperty("--accent-hover", hover);
+  root.style.setProperty("--accent-rgb", hexToRgbTriplet(accent));
+  root.style.setProperty("--border-accent", accent);
+  root.style.setProperty("--text-accent", accent);
+  root.style.setProperty("--text-accent-hover", hover);
 }
 
 function App() {
@@ -67,6 +99,7 @@ function App() {
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [, setPath] = useState(window.location.pathname);
   const [theme, setTheme] = useState<ThemeName>(loadTheme);
+  const [accent, setAccent] = useState<string | null>(() => loadAccent(loadTheme()));
 
   // Apply theme to <html> so [data-theme] token overrides kick in globally
   useEffect(() => {
@@ -77,6 +110,19 @@ function App() {
     }
     localStorage.setItem("boom-theme", theme);
   }, [theme]);
+
+  // Apply custom accent override + persist per-theme
+  useEffect(() => {
+    applyAccent(accent);
+    if (accent) localStorage.setItem(`boom-accent-${theme}`, accent);
+    else localStorage.removeItem(`boom-accent-${theme}`);
+  }, [accent, theme]);
+
+  // Switching themes loads that theme's saved accent (or clears if none)
+  const handleThemeChange = useCallback((next: ThemeName) => {
+    setTheme(next);
+    setAccent(loadAccent(next));
+  }, []);
 
   useEffect(() => {
     const onPop = () => setPath(window.location.pathname);
@@ -293,7 +339,9 @@ function App() {
         connectionDetails={connectionDetails}
         onLeave={handleLeave}
         theme={theme}
-        onThemeChange={setTheme}
+        onThemeChange={handleThemeChange}
+        accent={accent}
+        onAccentChange={setAccent}
         onInvite={connectionDetails.inviteToken ? undefined : handleInvite}
       />
     );

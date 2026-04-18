@@ -30,6 +30,9 @@
   --bg-accent-ghost: rgb(16 194 238 / 0.15);
   --bg-accent-ghost-hover: rgb(16 194 238 / 0.25);
   --bg-backdrop: rgb(0 0 0 / 0.6);
+  /* Raised strips (toolbar, chat panel) — same as page by default;
+     themes may lift them onto a surface fill. */
+  --bg-raised: var(--bg-page);
 
   /* ── Color: text ───────────────────────────────────────────── */
   --text-primary: rgb(231 231 231);
@@ -57,6 +60,13 @@
   --accent: #10c2ee;
   --accent-hover: #0eadd6;
   --danger: #d32f2f;
+
+  /* RGB channels of --accent, for inline alpha interpolation
+     (e.g. tile speaking indicator). Format: space-separated "R G B". */
+  --accent-rgb: 16 194 238;
+
+  /* Max blur radius of the tile speaking-glow at full intensity */
+  --tile-speaking-glow: 12px;
 
   /* ── Typography ────────────────────────────────────────────── */
   --font-body: "Open Sans", system-ui, sans-serif;
@@ -115,6 +125,59 @@
   --motion-hover: 150ms cubic-bezier(0.33, 1, 0.68, 1);
   --motion-focus-appear: 150ms cubic-bezier(0.33, 1, 0.68, 1);
   --motion-spinner: 0.8s linear;
+
+  /* ── Elevation (default: flat — themes opt in to shadows) ──── */
+  --shadow-tile: none;
+  --shadow-dialog: none;
+  --shadow-button: none;
+  --shadow-button-hover: none;
+  --shadow-raised: none;
+}
+
+/* ── Classic light theme ─────────────────────────────────────── */
+
+[data-theme="classic-light"] {
+  --bg-page: #f5f5f5;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #ffffff;
+  --bg-surface-hover: #ececec;
+  --bg-button: #ffffff;
+  --bg-button-hover: #ececec;
+  --bg-button-secondary: #ebebeb;
+  --bg-button-secondary-hover: #dcdcdc;
+  --bg-tile: #ffffff;
+  --bg-tile-screenshare: #e8e8e8;
+  --bg-chat-bubble-local: rgb(16 194 238 / 0.18);
+  --bg-chat-bubble-remote: #ebebeb;
+  --bg-hover-subtle: rgb(0 0 0 / 0.04);
+  --bg-row: rgb(0 0 0 / 0.02);
+  --bg-row-hover: rgb(0 0 0 / 0.05);
+  --bg-error: rgb(211 47 47 / 0.9);
+  --bg-error-ghost: rgb(211 47 47 / 0.08);
+  --bg-accent-ghost: rgb(16 194 238 / 0.15);
+  --bg-accent-ghost-hover: rgb(16 194 238 / 0.25);
+  --bg-backdrop: rgb(0 0 0 / 0.4);
+  --bg-raised: var(--bg-surface);
+
+  --text-primary: rgb(20 20 20);
+  --text-secondary: rgb(50 50 50);
+  --text-tertiary: rgb(80 80 80);
+  --text-muted: rgb(110 110 110);
+  --text-dim: rgb(140 140 140);
+  --text-dimmer: rgb(170 170 170);
+  --text-on-accent: #000;
+  --text-accent: #0097b8;
+  --text-accent-hover: #00b0d6;
+  --text-error: #d32f2f;
+  --text-placeholder: rgb(150 150 150);
+  --text-icon-muted: rgb(0 0 0 / 0.15);
+
+  --border-default: rgb(0 0 0 / 0.1);
+  --border-raised: rgb(0 0 0 / 0.15);
+  --border-strong: rgb(0 0 0 / 0.25);
+  --border-dialog: rgb(0 0 0 / 0.12);
+  --border-accent: #10c2ee;
+  --border-error: #d32f2f;
 }
 
 /* ── Terminal theme ──────────────────────────────────────────── */
@@ -167,6 +230,8 @@
   --accent: #00ff88;
   --accent-hover: #00ffaa;
   --danger: #ff0040;
+  --accent-rgb: 0 255 136;
+  --tile-speaking-glow: 16px;
 
   /* Monospace */
   --font-body: ui-monospace, "JetBrains Mono", "SF Mono", "Courier New", monospace;
@@ -189,4 +254,112 @@
   /* Instant motion — no easing */
   --motion-hover: 0ms;
   --motion-focus-appear: 0ms;
+}
+
+/* ── Material theme ──────────────────────────────────────────── */
+
+[data-theme="material"] {
+  /* Material light surfaces — elevation via shadow, not outlines.
+     Page is a cool off-white; cards/tiles/dialogs are pure white
+     and float above it with drop shadows. */
+  --bg-page: #fafafa;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #ffffff;
+  --bg-surface-hover: #f5f5f5;
+  --bg-button: #ffffff;
+  --bg-button-hover: #f5f5f5;
+  --bg-button-secondary: #ffffff;
+  --bg-button-secondary-hover: #f5f5f5;
+  --bg-tile: #ffffff;
+  --bg-tile-screenshare: #eeeeee;
+  --bg-chat-bubble-local: #ede7f6;
+  --bg-chat-bubble-remote: #f5f5f5;
+  --bg-hover-subtle: rgb(98 0 238 / 0.04);
+  --bg-row: transparent;
+  --bg-row-hover: rgb(98 0 238 / 0.06);
+  --bg-error: rgb(176 0 32 / 0.9);
+  --bg-error-ghost: rgb(176 0 32 / 0.08);
+  --bg-accent-ghost: rgb(98 0 238 / 0.08);
+  --bg-accent-ghost-hover: rgb(98 0 238 / 0.12);
+  --bg-backdrop: rgb(0 0 0 / 0.32);
+  --bg-raised: var(--bg-surface);
+
+  /* Text: Material emphasis levels — 87% / 60% / 38% black on light */
+  --text-primary: rgb(0 0 0 / 0.87);
+  --text-secondary: rgb(0 0 0 / 0.74);
+  --text-tertiary: rgb(0 0 0 / 0.6);
+  --text-muted: rgb(0 0 0 / 0.54);
+  --text-dim: rgb(0 0 0 / 0.38);
+  --text-dimmer: rgb(0 0 0 / 0.26);
+  --text-on-accent: #ffffff;
+  --text-accent: #6200ee;
+  --text-accent-hover: #7722ff;
+  --text-error: #b00020;
+  --text-placeholder: rgb(0 0 0 / 0.38);
+  --text-icon-muted: rgb(0 0 0 / 0.38);
+
+  /* No outlines by default — elevation does the work. Borders kick in
+     only for text inputs (outlined variant) and the odd divider. */
+  --border-default: transparent;
+  --border-raised: rgb(0 0 0 / 0.23);
+  --border-strong: rgb(0 0 0 / 0.42);
+  --border-dialog: transparent;
+  --border-accent: #6200ee;
+  --border-error: #b00020;
+
+  /* Primary: Material purple 500 */
+  --accent: #6200ee;
+  --accent-hover: #7722ff;
+  --danger: #b00020;
+  --accent-rgb: 98 0 238;
+  --tile-speaking-glow: 16px;
+
+  /* Roboto — MUI's default, with safe web fallbacks */
+  --font-body: Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-heading: Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
+
+  /* Material rounded corners — pill buttons, soft everything else */
+  --radius-button: 9999px;
+  --radius-input: 9999px;
+  --radius-tile: 12px;
+  --radius-dialog: 12px;
+  --radius-bubble: 16px;
+  --radius-badge: 9999px;
+  --radius-row: 8px;
+  --radius-toast: 8px;
+  --radius-radio: 9999px;
+
+  /* Elevation — canonical Material Design 2 shadows.
+     Three-layer composition: key (umbra) + penumbra + ambient.
+     Spec: https://m2.material.io/design/environment/light-shadows */
+
+  /* 1dp — cards at rest */
+  --shadow-tile:
+    0 2px 1px -1px rgb(0 0 0 / 0.2),
+    0 1px 1px 0 rgb(0 0 0 / 0.14),
+    0 1px 3px 0 rgb(0 0 0 / 0.12);
+
+  /* 2dp — raised button at rest */
+  --shadow-button:
+    0 3px 1px -2px rgb(0 0 0 / 0.2),
+    0 2px 2px 0 rgb(0 0 0 / 0.14),
+    0 1px 5px 0 rgb(0 0 0 / 0.12);
+
+  /* 8dp — raised button hover / pressed */
+  --shadow-button-hover:
+    0 5px 5px -3px rgb(0 0 0 / 0.2),
+    0 8px 10px 1px rgb(0 0 0 / 0.14),
+    0 3px 14px 2px rgb(0 0 0 / 0.12);
+
+  /* 4dp — app bar / raised strip */
+  --shadow-raised:
+    0 2px 4px -1px rgb(0 0 0 / 0.2),
+    0 4px 5px 0 rgb(0 0 0 / 0.14),
+    0 1px 10px 0 rgb(0 0 0 / 0.12);
+
+  /* 24dp — modal dialog */
+  --shadow-dialog:
+    0 11px 15px -7px rgb(0 0 0 / 0.2),
+    0 24px 38px 3px rgb(0 0 0 / 0.14),
+    0 9px 46px 8px rgb(0 0 0 / 0.12);
 }

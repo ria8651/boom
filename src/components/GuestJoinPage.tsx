@@ -40,6 +40,7 @@ export default function GuestJoinPage({ room, inviteToken, onJoin, error }: Gues
             <img src="/banner-flat.svg" alt="Bink Studios" className="page-branding" />
           </a>
         </header>
+        <hr />
 
         <p className="guest-join-room">
           You've been invited to join <strong>{room}</strong>
