@@ -87,14 +87,16 @@ test.describe("LobbyPage", () => {
   test("renders lobby with create room form and room list", async ({ page }) => {
     await expect(page.locator('input[placeholder="Room name"]')).toBeVisible();
     await expect(page.locator("text=Create & Join")).toBeVisible();
-    await expect(page.locator(".lobby-rooms-heading")).toHaveText("Active Rooms");
+    await expect(page.locator(".lobby-rooms-heading")).toHaveText("Rooms");
     await snap(page, "lobby");
   });
 
 
   test("validates empty room name", async ({ page }) => {
     await page.locator("text=Create & Join").click();
-    await expect(page.locator(".lobby-error")).toBeVisible();
+    await expect(
+      page.locator(".lobby-error").filter({ hasText: "Enter a room name" }),
+    ).toBeVisible();
     await snap(page, "lobby-empty-room-error");
   });
 
@@ -102,6 +104,98 @@ test.describe("LobbyPage", () => {
     await page.locator("text=Log out").click();
     await expect(page.locator("text=Sign in with GitHub")).toBeVisible({ timeout: 5_000 });
     await snap(page, "after-logout");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Recent Rooms (localStorage-driven)
+// ---------------------------------------------------------------------------
+
+test.describe("Recent rooms", () => {
+  test("shows recent rooms from localStorage with Reopen button", async ({ page }) => {
+    await devLogin(page);
+
+    // Seed a recent room in localStorage and reload
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "boom:recent-rooms:dev",
+        JSON.stringify([
+          { name: "planning-sync", lastJoined: Date.now() - 5 * 60_000 },
+          { name: "retro", lastJoined: Date.now() - 2 * 60 * 60_000 },
+        ]),
+      );
+    });
+    await page.reload();
+
+    // Both recent rooms visible with their relative timestamps
+    const row = (name: string) => page.locator(".lobby-room-row").filter({ hasText: name });
+    await expect(row("planning-sync")).toBeVisible();
+    await expect(row("planning-sync")).toContainText("5m ago");
+    await expect(row("retro")).toContainText("2h ago");
+
+    // Reopen button is present on recent (closed) rooms
+    await expect(row("planning-sync").locator("text=Reopen")).toBeVisible();
+    await snap(page, "recent-rooms-list");
+  });
+
+  test("forget button removes a recent room", async ({ page }) => {
+    await devLogin(page);
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "boom:recent-rooms:dev",
+        JSON.stringify([{ name: "old-room", lastJoined: Date.now() - 60_000 }]),
+      );
+    });
+    await page.reload();
+
+    const row = page.locator(".lobby-room-row").filter({ hasText: "old-room" });
+    await expect(row).toBeVisible();
+    await row.locator(".lobby-forget-btn").click();
+    await expect(row).not.toBeVisible();
+
+    // And it's gone from storage
+    const stored = await page.evaluate(() => localStorage.getItem("boom:recent-rooms:dev"));
+    expect(stored).toBe("[]");
+  });
+
+  test("recent rooms are scoped per user", async ({ page }) => {
+    await page.context().clearCookies();
+    await devLogin(page, "alice");
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "boom:recent-rooms:alice",
+        JSON.stringify([{ name: "alices-room", lastJoined: Date.now() }]),
+      );
+    });
+    await page.reload();
+    await expect(page.locator(".lobby-room-row").filter({ hasText: "alices-room" })).toBeVisible();
+
+    // Log out and in as bob — alice's rooms should not appear
+    await page.locator("text=Log out").click();
+    await expect(page.locator("text=Sign in with GitHub")).toBeVisible({ timeout: 5_000 });
+    await devLogin(page, "bob");
+    await expect(page.locator(".lobby-room-row").filter({ hasText: "alices-room" })).not.toBeVisible();
+  });
+
+  test("server error shows banner, recent rooms still render", async ({ page }) => {
+    // Mock /api/rooms to fail
+    await page.route("**/api/rooms", (route) =>
+      route.fulfill({ status: 500, contentType: "application/json", body: "{}" }),
+    );
+    await devLogin(page);
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "boom:recent-rooms:dev",
+        JSON.stringify([{ name: "offline-cached", lastJoined: Date.now() }]),
+      );
+    });
+    await page.reload();
+
+    // Error surfaces as the global toast banner at the bottom of the page
+    await expect(page.locator(".error-banner--toast")).toContainText("Couldn't reach server");
+    // Recent room still rendered (client-side)
+    await expect(page.locator(".lobby-room-row").filter({ hasText: "offline-cached" })).toBeVisible();
+    await snap(page, "lobby-server-error");
   });
 });
 

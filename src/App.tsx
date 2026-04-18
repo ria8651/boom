@@ -5,6 +5,8 @@ import AuthPage from "./components/AuthPage";
 import LobbyPage from "./components/LobbyPage";
 import RoomPage from "./components/RoomPage";
 import SimDebugPage from "./components/SimDebugPage";
+import ErrorBanner from "./components/ErrorBanner";
+import { rememberRoom } from "./recentRooms";
 import "./styles/debug.css";
 
 const SESSION_KEY = "boom:session";
@@ -125,6 +127,7 @@ function App() {
         identity,
       };
       saveSession(details);
+      rememberRoom(identity, room);
       setError("");
       setConnectionDetails(details);
       setView("room");
@@ -186,9 +189,10 @@ function App() {
         user={user!}
         onJoinRoom={handleJoinRoom}
         onLogout={handleLogout}
+        onError={setError}
       />
       {error && (
-        <div className="error-banner error-banner--toast">{error}</div>
+        <ErrorBanner message={error} onDismiss={() => setError("")} variant="toast" />
       )}
     </div>
   );

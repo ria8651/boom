@@ -1,6 +1,7 @@
 interface ErrorBannerProps {
   message: string;
   onDismiss: () => void;
+  variant?: "inline" | "toast";
 }
 
 function AlertIcon() {
@@ -11,9 +12,10 @@ function AlertIcon() {
   );
 }
 
-export default function ErrorBanner({ message, onDismiss }: ErrorBannerProps) {
+export default function ErrorBanner({ message, onDismiss, variant }: ErrorBannerProps) {
+  const variantClass = variant ? ` error-banner--${variant}` : "";
   return (
-    <div className="error-banner" role="alert">
+    <div className={`error-banner${variantClass}`} role="alert">
       <span className="error-banner-text">
         <AlertIcon />
         {message}

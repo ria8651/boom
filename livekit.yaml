@@ -1,6 +1,5 @@
 port: 7880
 rtc:
-  node_ip: 118.92.198.33
   port_range_start: 7882
   port_range_end: 7882
   use_external_ip: false
@@ -10,3 +9,6 @@ bind_addresses:
 
 logging:
   level: info
+
+redis:
+  address: redis:6379

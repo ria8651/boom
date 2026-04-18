@@ -173,7 +173,27 @@ try {
 
 async function setRoomRecordingMetadata(room: string, recording: boolean) {
   const roomService = getRoomServiceClient();
-  await roomService.updateRoomMetadata(room, JSON.stringify({ recording }));
+  try {
+    await roomService.updateRoomMetadata(room, JSON.stringify({ recording }));
+  } catch (err) {
+    // Room may have already been cleaned up — not fatal
+    console.warn(`Could not update metadata for room ${room}:`, err);
+  }
+}
+
+async function stopRoomRecording(room: string): Promise<boolean> {
+  const egressId = activeEgresses.get(room);
+  if (!egressId) return false;
+  try {
+    const egress = getEgressClient();
+    await egress.stopEgress(egressId);
+  } catch (err) {
+    // Egress may have already stopped on its own
+    console.warn(`Could not stop egress ${egressId}:`, err);
+  }
+  activeEgresses.delete(room);
+  await setRoomRecordingMetadata(room, false);
+  return true;
 }
 
 app.post("/api/recordings/start", tokenLimiter, authMiddleware, async (req, res) => {
@@ -190,7 +210,7 @@ app.post("/api/recordings/start", tokenLimiter, authMiddleware, async (req, res)
 
   try {
     const egress = getEgressClient();
-    const output = new EncodedFileOutput({ filepath: "{room_name}-{time}" });
+    const output = new EncodedFileOutput({ filepath: "/out/{room_name}-{time}.mp4" });
     const info = await egress.startRoomCompositeEgress(room, output);
     activeEgresses.set(room, info.egressId);
     await setRoomRecordingMetadata(room, true);
@@ -208,23 +228,14 @@ app.post("/api/recordings/stop", tokenLimiter, authMiddleware, async (req, res) 
     return;
   }
 
-  const egressId = activeEgresses.get(room);
-  if (!egressId) {
+  const stopped = await stopRoomRecording(room);
+  if (!stopped) {
     res.status(404).json({ error: "No active recording for this room" });
     return;
   }
-
-  try {
-    const egress = getEgressClient();
-    await egress.stopEgress(egressId);
-    activeEgresses.delete(room);
-    await setRoomRecordingMetadata(room, false);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("Failed to stop recording:", err);
-    res.status(500).json({ error: "Failed to stop recording" });
-  }
+  res.json({ ok: true });
 });
+
 
 // --- LiveKit token ---
 

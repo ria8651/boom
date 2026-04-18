@@ -32,15 +32,25 @@ services:
       - "LIVEKIT_KEYS=${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
-    command: --config /etc/livekit.yaml
+    command: --config /etc/livekit.yaml --node-ip ${LIVEKIT_NODE_IP}
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
 
   egress:
     image: livekit/egress:latest
     container_name: egress
     restart: unless-stopped
+    cap_add:
+      - SYS_ADMIN
     environment:
-      - EGRESS_CONFIG_STRING={"api_key":"${LIVEKIT_API_KEY}","api_secret":"${LIVEKIT_API_SECRET}","ws_url":"ws://livekit:7880"}
+      EGRESS_CONFIG_BODY: '{"api_key":"${LIVEKIT_API_KEY}","api_secret":"${LIVEKIT_API_SECRET}","ws_url":"ws://livekit:7880","redis":{"address":"redis:6379"},"insecure":true}'
     volumes:
-      - ./recordings:/home/egress/tmp
+      - ./recordings:/out
     depends_on:
       - livekit
+      - redis
