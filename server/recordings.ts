@@ -8,10 +8,9 @@ import { getLiveKitHttpUrl, getRoomServiceClient } from "./rooms.js";
 const RECORDINGS_DIR = path.resolve(process.env.BOOM_RECORDINGS_DIR ?? "./recordings");
 const FREE_SPACE_THRESHOLD_BYTES = 1 * 1024 * 1024 * 1024; // 1 GB
 
-// Strict filename validation for URL parameters. LiveKit's {room_name}-{time}.mp4
-// template can produce names like "my-room-2026-04-18T12-30-45.mp4" or similar;
-// keep the allow-list narrow so path traversal can't sneak in.
-const FILENAME_REGEX = /^[a-zA-Z0-9_. -]{1,128}\.mp4$/;
+// Filename validation for URL parameters. Blocks path separators, null, and
+// leading dots; `isSafeInsideDir` is the actual path-traversal guard.
+const FILENAME_REGEX = /^[^./\\\x00][^/\\\x00]{0,127}\.mp4$/u;
 
 // LiveKit egress's {time} substitution produces YYYY-MM-DDTHHMMSS in UTC.
 // Anchoring on this exact shape lets us correctly extract both the room name
@@ -40,15 +39,6 @@ function parseFilename(filename: string): ParsedFilename {
     room: lastDash > 0 ? base.slice(0, lastDash) : base,
     startedAt: null,
   };
-}
-
-// Egress's ffmpeg/gstreamer pipeline has failed for us on non-ASCII filepaths
-// (room "アニメ" → the subprocess dies shortly after request validation). Pre-
-// substitute the {room_name} part of the template with an ASCII-only version;
-// leave {time} for LiveKit to resolve.
-function safeFilenameComponent(s: string): string {
-  const cleaned = s.replace(/[^a-zA-Z0-9_\- ]/g, "_").trim().slice(0, 64);
-  return cleaned || "recording";
 }
 
 function isSafeInsideDir(filename: string): boolean {
@@ -174,8 +164,7 @@ export async function startRoomRecording(room: string): Promise<string> {
   }
 
   try {
-    const safeName = safeFilenameComponent(room);
-    const output = new EncodedFileOutput({ filepath: `/out/${safeName}-{time}.mp4` });
+    const output = new EncodedFileOutput({ filepath: `/out/${room}-{time}.mp4` });
     const info = await getEgressClient().startRoomCompositeEgress(room, output);
     activeEgresses.set(room, info.egressId);
     await setRoomRecordingMetadata(room, true);
@@ -353,8 +342,12 @@ async function handleWebhookEvent(
   }
 }
 
+// The raw `err.message` from LiveKit/undici can echo back credentials (e.g.
+// "invalid API key: <key>"), hostnames, or internal paths. Only return messages
+// that are explicitly safe to surface; fall back to a generic string and rely
+// on server logs for details.
 export function describeUpstreamError(err: unknown): string {
-  const e = err as { cause?: { code?: string; hostname?: string }; message?: string };
+  const e = err as { cause?: { code?: string; hostname?: string } };
   const code = e?.cause?.code;
   if (code === "ENOTFOUND") {
     return `cannot resolve ${e.cause?.hostname ?? "LiveKit host"} — check LIVEKIT_URL`;
@@ -365,7 +358,7 @@ export function describeUpstreamError(err: unknown): string {
   if (code === "ETIMEDOUT") {
     return "LiveKit timed out";
   }
-  return e?.message ?? "upstream error";
+  return "upstream error (see server logs)";
 }
 
 function friendlyEgressError(raw: string | undefined): string | null {

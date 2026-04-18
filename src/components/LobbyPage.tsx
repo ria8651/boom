@@ -83,46 +83,6 @@ export default function LobbyPage({ user, onJoinRoom, onLogout, onError, onShowR
     setRecent((prev) => prev.filter((r) => r.name !== roomName));
   };
 
-  const inviteDialogRef = useRef<HTMLDialogElement>(null);
-  const [inviteUrl, setInviteUrl] = useState("");
-  const [inviteCopied, setInviteCopied] = useState(false);
-
-  const handleShowInvite = async (roomName: string) => {
-    try {
-      const res = await fetch("/api/invite", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room: roomName }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        onError(data?.error ?? `Failed to create invite (${res.status})`);
-        return;
-      }
-      const { inviteToken } = await res.json();
-      setInviteUrl(`${window.location.origin}/?invite=${inviteToken}`);
-      setInviteCopied(false);
-      inviteDialogRef.current?.showModal();
-    } catch (err) {
-      onError(`Failed to create invite (${err instanceof Error ? err.message : "unknown error"}).`);
-    }
-  };
-
-  const handleCopyInvite = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteUrl);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = inviteUrl;
-      ta.style.cssText = "position:fixed;opacity:0";
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      ta.remove();
-    }
-    setInviteCopied(true);
-  };
-
   // Merge active + recent into a single list. Active rooms first (sorted by
   // participant count desc), then closed-but-recent rooms (sorted by recency).
   type Row =
@@ -199,7 +159,7 @@ export default function LobbyPage({ user, onJoinRoom, onLogout, onError, onShowR
                   ) : (
                     <span className="lobby-room-count">{formatRelative(row.lastJoined)}</span>
                   )}
-                  {row.kind === "recent" ? (
+                  {row.kind === "recent" && (
                     <button
                       type="button"
                       className="lobby-forget-btn"
@@ -208,14 +168,6 @@ export default function LobbyPage({ user, onJoinRoom, onLogout, onError, onShowR
                       title="Remove from history"
                     >
                       ×
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="lobby-invite-btn"
-                      onClick={() => handleShowInvite(row.name)}
-                    >
-                      Invite
                     </button>
                   )}
                   <button
@@ -231,22 +183,6 @@ export default function LobbyPage({ user, onJoinRoom, onLogout, onError, onShowR
           )}
         </section>
 
-        <dialog ref={inviteDialogRef} className="invite-dialog">
-          <p className="invite-dialog-message">Share this link to invite someone:</p>
-          <input
-            type="text"
-            className="invite-url-input"
-            value={inviteUrl}
-            readOnly
-            onClick={(e) => (e.target as HTMLInputElement).select()}
-          />
-          <div className="invite-dialog-actions">
-            <button className="invite-dialog-btn" onClick={() => inviteDialogRef.current?.close()}>Close</button>
-            <button className="invite-dialog-btn invite-dialog-btn--primary" onClick={handleCopyInvite}>
-              {inviteCopied ? "Copied!" : "Copy link"}
-            </button>
-          </div>
-        </dialog>
       </article>
     </main>
   );

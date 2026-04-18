@@ -19,16 +19,26 @@ export interface SessionUser {
   avatar: string;
 }
 
-export function getGitHubAuthUrl(): string {
+export function getGitHubAuthUrl(state: string): string {
   const clientId = process.env.GITHUB_CLIENT_ID;
   if (!clientId) throw new Error("GITHUB_CLIENT_ID is not set");
 
   const params = new URLSearchParams({
     client_id: clientId,
     scope: "read:org",
+    state,
   });
   return `${GITHUB_AUTH_URL}?${params}`;
 }
+
+export const OAUTH_STATE_COOKIE = "boom_oauth_state";
+export const OAUTH_STATE_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV !== "development",
+  sameSite: "lax" as const,
+  maxAge: 10 * 60 * 1000,
+  path: "/",
+};
 
 export async function exchangeCode(code: string): Promise<string> {
   const res = await fetch(GITHUB_TOKEN_URL, {
@@ -61,11 +71,23 @@ async function checkOrgMembership(accessToken: string, orgs: string[]): Promise<
   for (const org of orgs) {
     try {
       const res = await fetch(`${GITHUB_API}/user/memberships/orgs/${org}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github+json",
+        },
       });
-      if (res.ok) return true;
-    } catch {
-      // Network error for this org, try next
+      if (res.ok) {
+        const data = (await res.json()) as { state?: string };
+        if (data.state === "active") return true;
+        console.warn(`[auth] org "${org}" membership state=${data.state}, not allowed`);
+      } else {
+        const body = await res.text();
+        console.warn(
+          `[auth] org "${org}" membership check failed: ${res.status} ${res.statusText} — ${body.slice(0, 200)}`,
+        );
+      }
+    } catch (err) {
+      console.warn(`[auth] org "${org}" membership check errored:`, err);
     }
   }
   return false;
@@ -113,10 +135,11 @@ function sign(headerPayload: string): string {
 }
 
 const JWT_HEADER = base64urlEncode({ alg: "HS256", typ: "JWT" });
-const SESSION_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 days
+const SESSION_EXPIRY_SECONDS = 24 * 60 * 60; // 24 hours
 
 export function createSessionToken(user: SessionUser): string {
   const payload = base64urlEncode({
+    type: "session",
     sub: user.username,
     name: user.name,
     avatar: user.avatar,
@@ -132,15 +155,19 @@ export function verifySessionToken(token: string): SessionUser | null {
 
   const headerPayload = `${parts[0]}.${parts[1]}`;
   const expected = sign(headerPayload);
-  if (!crypto.timingSafeEqual(Buffer.from(parts[2]), Buffer.from(expected))) {
+  const sig = Buffer.from(parts[2]);
+  const exp = Buffer.from(expected);
+  if (sig.length !== exp.length || !crypto.timingSafeEqual(sig, exp)) {
     return null;
   }
 
   try {
     const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+    if (payload.type !== "session") return null;
     if (typeof payload.exp === "number" && payload.exp < Date.now() / 1000) {
       return null;
     }
+    if (typeof payload.sub !== "string" || !payload.sub) return null;
     return {
       username: payload.sub,
       name: payload.name ?? payload.sub,

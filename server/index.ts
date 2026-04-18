@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import express from "express";
 import cookieParser from "cookie-parser";
 import fs from "fs";
@@ -14,10 +15,12 @@ import {
   fetchGitHubUser,
   getGitHubAuthUrl,
   isUserAllowed,
+  OAUTH_STATE_COOKIE,
+  OAUTH_STATE_COOKIE_OPTIONS,
   SESSION_COOKIE_OPTIONS,
   validateInviteToken,
 } from "./auth.js";
-import { getLiveKitWsUrl, listActiveRooms } from "./rooms.js";
+import { getLiveKitWsUrl, isRoomParticipant, listActiveRooms } from "./rooms.js";
 import {
   RecordingError,
   deleteRecordingHandler,
@@ -33,6 +36,16 @@ import {
 const isDev = process.env.NODE_ENV === "development";
 const app = express();
 
+// Pin connect-src to the configured LiveKit origin so an XSS (if one ever
+// landed) can't exfiltrate data to an arbitrary wss:/https: host.
+function liveKitConnectOrigin(): string {
+  try {
+    return new URL(getLiveKitWsUrl()).origin;
+  } catch {
+    return "";
+  }
+}
+
 // Security headers — relaxed in dev for Vite's inline scripts and HMR websocket
 app.use(helmet({
   contentSecurityPolicy: isDev ? false : {
@@ -41,7 +54,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", "wss:", "https:"],
+      connectSrc: ["'self'", liveKitConnectOrigin()].filter(Boolean),
       imgSrc: ["'self'", "data:", "blob:", "https://avatars.githubusercontent.com"],
       mediaSrc: ["'self'", "blob:"],
       workerSrc: ["'self'", "blob:"],
@@ -88,11 +101,20 @@ function isValidString(s: unknown, maxLen = 64): s is string {
   return typeof s === "string" && s.length > 0 && s.length <= maxLen;
 }
 
+// Room names flow into filesystem paths (egress output template), HMAC payloads,
+// and LiveKit grants. Reject path separators, nulls, and leading dots at the
+// boundary so downstream code can trust the string.
+function isValidRoomName(s: unknown): s is string {
+  return isValidString(s) && !/[/\\\x00]/.test(s) && !s.startsWith(".");
+}
+
 // --- Auth routes ---
 
 app.get("/api/auth/github", authLimiter, (_req, res) => {
   try {
-    res.redirect(getGitHubAuthUrl());
+    const state = crypto.randomBytes(16).toString("base64url");
+    res.cookie(OAUTH_STATE_COOKIE, state, OAUTH_STATE_COOKIE_OPTIONS);
+    res.redirect(getGitHubAuthUrl(state));
   } catch (err) {
     res.status(500).json({ error: "GitHub OAuth not configured" });
   }
@@ -100,8 +122,22 @@ app.get("/api/auth/github", authLimiter, (_req, res) => {
 
 app.get("/api/auth/github/callback", authLimiter, async (req, res) => {
   const code = req.query.code;
+  const state = req.query.state;
+  const cookieState = req.cookies?.[OAUTH_STATE_COOKIE];
+  // Always clear the state cookie — it's single-use regardless of outcome.
+  res.clearCookie(OAUTH_STATE_COOKIE, { path: "/" });
+
   if (typeof code !== "string" || !code) {
     res.redirect("/?error=missing_code");
+    return;
+  }
+  if (
+    typeof state !== "string" ||
+    !state ||
+    typeof cookieState !== "string" ||
+    state !== cookieState
+  ) {
+    res.redirect("/?error=invalid_state");
     return;
   }
 
@@ -174,7 +210,7 @@ await recoverActiveEgresses();
 
 app.post("/api/recordings/start", tokenLimiter, authMiddleware, async (req, res) => {
   const { room } = req.body;
-  if (!isValidString(room)) {
+  if (!isValidRoomName(room)) {
     res.status(400).json({ error: "room is required" });
     return;
   }
@@ -194,7 +230,7 @@ app.post("/api/recordings/start", tokenLimiter, authMiddleware, async (req, res)
 
 app.post("/api/recordings/stop", tokenLimiter, authMiddleware, async (req, res) => {
   const { room } = req.body;
-  if (!isValidString(room)) {
+  if (!isValidRoomName(room)) {
     res.status(400).json({ error: "room is required" });
     return;
   }
@@ -217,7 +253,7 @@ app.delete("/api/recordings/:filename", authMiddleware, deleteRecordingHandler);
 app.post("/api/token", tokenLimiter, authMiddleware, async (req, res) => {
   const { room } = req.body;
 
-  if (!isValidString(room)) {
+  if (!isValidRoomName(room)) {
     res.status(400).json({ error: "room is required" });
     return;
   }
@@ -254,10 +290,17 @@ app.post("/api/token", tokenLimiter, authMiddleware, async (req, res) => {
 
 // --- Invites ---
 
-app.post("/api/invite", tokenLimiter, authMiddleware, (req, res) => {
+app.post("/api/invite", tokenLimiter, authMiddleware, async (req, res) => {
   const { room } = req.body;
-  if (!isValidString(room)) {
+  if (!isValidRoomName(room)) {
     res.status(400).json({ error: "room is required" });
+    return;
+  }
+  // Only a current participant can mint invites — otherwise any allowlisted
+  // user could hand out tokens to arbitrary rooms (including ones they've
+  // never been in) and bypass the allowlist for third parties.
+  if (!(await isRoomParticipant(room, req.user!.username))) {
+    res.status(403).json({ error: "You must be in the room to create an invite" });
     return;
   }
   res.json({ inviteToken: createInviteToken(room) });
@@ -277,7 +320,7 @@ app.post("/api/invite/join", tokenLimiter, async (req, res) => {
   }
 
   const safeName = name.replace(/[^a-zA-Z0-9_\- ]/g, "").trim().slice(0, 32) || "guest";
-  const identitySuffix = Math.random().toString(16).slice(2, 6);
+  const identitySuffix = crypto.randomBytes(8).toString("base64url");
   const identity = `guest-${safeName.replace(/\s+/g, "_")}-${identitySuffix}`;
 
   const token = new AccessToken(
