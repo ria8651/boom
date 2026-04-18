@@ -14,7 +14,7 @@ export default function PipContent({ pipWindow, layoutMode }: { pipWindow: Windo
   }, [pipWindow]);
 
   return createPortal(
-    <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+    <div className="pip-content">
       <VideoGrid
         containerWidth={size.width}
         containerHeight={size.height}

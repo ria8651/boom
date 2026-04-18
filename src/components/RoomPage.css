@@ -1,0 +1,38 @@
+/* ── Room layout ─────────────────────────────────────────────── */
+
+.room {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-page);
+}
+
+.room-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.room-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.room-grid-area {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.room-footer {
+  flex-shrink: 0;
+}
+
+.pip-content {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}

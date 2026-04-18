@@ -5,9 +5,10 @@ import {
   useLocalParticipant,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { LayoutMode } from "../layout/types.js";
-import SettingsModal, { type SettingsModalHandle, type ScreenShareSettings } from "./SettingsModal.js";
+import SettingsModal, { type SettingsModalHandle, type ScreenShareSettings, type ThemeName } from "./SettingsModal.js";
+import "./ControlBar.css";
 
 interface ControlBarProps {
   chatOpen: boolean;
@@ -17,12 +18,18 @@ interface ControlBarProps {
   onLayoutModeChange: (mode: LayoutMode) => void;
   screenShareSettings: ScreenShareSettings;
   onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
+  theme: ThemeName;
+  onThemeChange: (theme: ThemeName) => void;
   pipSupported?: boolean;
   pipActive?: boolean;
   onTogglePip?: () => void;
 }
 
-export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, screenShareSettings, onScreenShareSettingsChange, pipSupported, pipActive, onTogglePip }: ControlBarProps) {
+function cx(...parts: (string | false | undefined | null)[]): string {
+  return parts.filter(Boolean).join(" ");
+}
+
+export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutMode, onLayoutModeChange, screenShareSettings, onScreenShareSettingsChange, theme, onThemeChange, pipSupported, pipActive, onTogglePip }: ControlBarProps) {
   const settingsRef = useRef<SettingsModalHandle>(null);
   const mic = useTrackToggle({ source: Track.Source.Microphone });
   const cam = useTrackToggle({ source: Track.Source.Camera });
@@ -45,24 +52,22 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
   const micError = lastMicrophoneError != null;
   const camError = lastCameraError != null;
 
-  // Auto-collapse labels when buttons would overflow
+  // Auto-collapse labels when buttons would overflow.
+  // Toggled imperatively via data-compact attribute to avoid React state feedback loops.
   const barRef = useRef<HTMLDivElement>(null);
-  const [compact, setCompact] = useState(false);
 
   useEffect(() => {
     const el = barRef.current;
     if (!el) return;
     const check = () => {
-      // Temporarily show full labels to measure natural width
-      const wasCompact = el.classList.contains("control-bar--compact");
-      if (wasCompact) el.classList.remove("control-bar--compact");
+      const wasCompact = el.dataset.compact === "true";
+      if (wasCompact) el.dataset.compact = "false";
       const fullWidth = el.scrollWidth;
       const available = el.clientWidth;
-      if (wasCompact) el.classList.add("control-bar--compact");
-      setCompact(fullWidth > available + 1);
+      const wantCompact = fullWidth > available + 1;
+      el.dataset.compact = wantCompact ? "true" : "false";
     };
     check();
-    // Re-check on resize and on DOM changes (button text/count changes)
     const resizeObs = new ResizeObserver(check);
     resizeObs.observe(el);
     const mutationObs = new MutationObserver(check);
@@ -71,7 +76,13 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
   }, []);
 
   return (
-    <div ref={barRef} className={`control-bar line-top${compact ? " control-bar--compact" : ""}`}>
+    <div
+      ref={barRef}
+      data-compact="false"
+      role="toolbar"
+      aria-label="Room controls"
+      className="control-bar"
+    >
       {/* Microphone */}
       <MediaButton
         toggle={mic}
@@ -106,7 +117,7 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
         </button>
       ) : (
         <button
-          className={`control-btn${screen.enabled ? " control-btn--sharing" : ""}`}
+          className={cx("control-btn", screen.enabled && "control-btn--sharing")}
           onClick={() => screen.toggle()}
         >
           <ScreenIcon />
@@ -116,7 +127,7 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
 
       {/* Chat */}
       <button
-        className={`control-btn control-btn--chat${chatOpen ? " control-btn--active" : ""}`}
+        className={cx("control-btn control-btn--chat", chatOpen && "control-btn--active")}
         onClick={onToggleChat}
       >
         <ChatIcon />
@@ -135,7 +146,10 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
 
       {/* Picture-in-Picture */}
       {pipSupported && onTogglePip && (
-        <button className={`control-btn${pipActive ? " control-btn--active" : ""}`} onClick={onTogglePip}>
+        <button
+          className={cx("control-btn", pipActive && "control-btn--active")}
+          onClick={onTogglePip}
+        >
           <PipIcon />
           <span className="btn-label">Popout</span>
         </button>
@@ -150,14 +164,27 @@ export default function ControlBar({ chatOpen, onToggleChat, unreadChat, layoutM
         <span className="btn-label">Leave</span>
       </button>
       <dialog ref={leaveDialogRef} className="leave-dialog">
-        <p>Leave the room?</p>
+        <p className="leave-dialog-message">Leave the room?</p>
         <div className="leave-dialog-actions">
           <button className="leave-dialog-btn" onClick={() => leaveDialogRef.current?.close()}>Cancel</button>
-          <button className="leave-dialog-btn leave-dialog-btn--danger" onClick={() => { leaveDialogRef.current?.close(); disconnect.buttonProps.onClick(); }}>Leave</button>
+          <button
+            className="leave-dialog-btn leave-dialog-btn--danger"
+            onClick={() => { leaveDialogRef.current?.close(); disconnect.buttonProps.onClick(); }}
+          >
+            Leave
+          </button>
         </div>
       </dialog>
 
-      <SettingsModal ref={settingsRef} layoutMode={layoutMode} onChange={onLayoutModeChange} screenShareSettings={screenShareSettings} onScreenShareSettingsChange={onScreenShareSettingsChange} />
+      <SettingsModal
+        ref={settingsRef}
+        layoutMode={layoutMode}
+        onChange={onLayoutModeChange}
+        screenShareSettings={screenShareSettings}
+        onScreenShareSettingsChange={onScreenShareSettingsChange}
+        theme={theme}
+        onThemeChange={onThemeChange}
+      />
     </div>
   );
 }
@@ -213,7 +240,7 @@ function MediaButton({
 
   const btn = (
     <button
-      className={`control-btn${toggle.enabled ? "" : " control-btn--muted"}`}
+      className={cx("control-btn", !toggle.enabled && "control-btn--muted")}
       onClick={() => toggle.toggle()}
     >
       {toggle.enabled ? enabledIcon : disabledIcon}
@@ -292,7 +319,6 @@ function CamOffIcon() {
     </svg>
   );
 }
-
 
 function ScreenIcon() {
   return (

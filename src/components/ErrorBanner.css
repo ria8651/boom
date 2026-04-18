@@ -1,0 +1,58 @@
+/* ── Error banner (inline, toast) ────────────────────────────── */
+
+.error-banner {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-6);
+  width: fit-content;
+  max-width: calc(100% - 2 * var(--room-pad));
+  margin: 0 auto var(--room-pad);
+  padding: var(--space-5) var(--space-7);
+  background: var(--bg-error);
+  color: var(--text-on-accent);
+  border-radius: var(--radius-toast);
+  font-size: var(--text-md);
+}
+
+.error-banner--inline {
+  width: auto;
+  max-width: none;
+  margin: 0 0 var(--space-7) 0;
+}
+
+.error-banner--toast {
+  position: fixed;
+  bottom: var(--space-7);
+  left: 50%;
+  z-index: 1000;
+  width: auto;
+  max-width: calc(100% - 2rem);
+  margin: 0;
+  transform: translateX(-50%);
+}
+
+.error-banner-text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.error-banner-icon {
+  flex-shrink: 0;
+}
+
+.error-banner-dismiss {
+  flex-shrink: 0;
+  padding: 0;
+  background: none;
+  color: rgb(255 255 255 / 0.7);
+  border: none;
+  font-size: var(--text-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.error-banner-dismiss:hover {
+  color: var(--text-on-accent);
+}

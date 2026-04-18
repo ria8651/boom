@@ -1,0 +1,75 @@
+/* ── Global reset + defaults ─────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+/* Native dialog centering + backdrop */
+dialog {
+  margin: auto;
+  padding: 0;
+  border: none;
+  color: inherit;
+  background: transparent;
+}
+
+dialog::backdrop {
+  background: var(--bg-backdrop);
+}
+
+/* Fullscreen video presentation */
+video:fullscreen {
+  background: #000;
+  object-fit: contain;
+}
+
+/* Screen-reader-only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Shared pseudo-element decorations ────────────────────────── */
+
+/* A thin horizontal line across the top of the container, inset by room padding. */
+.line-top {
+  position: relative;
+}
+.line-top::before {
+  content: "";
+  position: absolute;
+  left: var(--room-pad);
+  right: var(--room-pad);
+  top: 0;
+  height: var(--stroke-default);
+  background: var(--border-default);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

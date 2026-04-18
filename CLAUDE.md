@@ -24,3 +24,7 @@ When working in a worktree, if `.env.local` doesn't exist, copy `.env.example` t
 
 - `isDev` requires explicit `NODE_ENV=development` — unset defaults to production (CSP on, no Vite)
 - Settings persist in localStorage: `boom-layout-mode`, `boom-screenshare-settings`, `boom-mic-enabled`, `boom-cam-enabled`
+
+## Semantic HTML
+
+Prefer semantic HTML elements over generic `<div>` or JS-managed equivalents. Use landmarks (`<main>`, `<header>`, `<nav>`, `<section>`, `<footer>`) for page structure, and native primitives (`<dialog>`, `<details>`, `<form>`, `<button>`) for interactive widgets. Only reach for a `<div>` when no semantic element fits.

@@ -1,5 +1,6 @@
 import { useRef, useImperativeHandle, forwardRef } from "react";
 import type { LayoutMode } from "../layout/types.js";
+import "./SettingsModal.css";
 
 export type ContentHint = "" | "text" | "detail" | "motion";
 
@@ -8,11 +9,15 @@ export interface ScreenShareSettings {
   contentHint: ContentHint;
 }
 
+export type ThemeName = "default" | "terminal";
+
 interface SettingsModalProps {
   layoutMode: LayoutMode;
   onChange: (mode: LayoutMode) => void;
   screenShareSettings: ScreenShareSettings;
   onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
+  theme: ThemeName;
+  onThemeChange: (theme: ThemeName) => void;
 }
 
 export interface SettingsModalHandle {
@@ -39,8 +44,13 @@ const contentHints = [
   { value: "motion", label: "Motion / video", description: "Optimise for smoothness" },
 ] as const;
 
+const themes: { value: ThemeName; label: string; description: string }[] = [
+  { value: "default", label: "Classic", description: "Dark slate with cyan accent" },
+  { value: "terminal", label: "Terminal", description: "Green-phosphor CRT" },
+];
+
 const SettingsModal = forwardRef<SettingsModalHandle, SettingsModalProps>(
-  function SettingsModal({ layoutMode, onChange, screenShareSettings, onScreenShareSettingsChange }, ref) {
+  function SettingsModal({ layoutMode, onChange, screenShareSettings, onScreenShareSettingsChange, theme, onThemeChange }, ref) {
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     useImperativeHandle(ref, () => ({
@@ -50,7 +60,7 @@ const SettingsModal = forwardRef<SettingsModalHandle, SettingsModalProps>(
     return (
       <dialog ref={dialogRef} className="settings-dialog">
         <form method="dialog">
-          <h2>Settings</h2>
+          <h2 className="settings-title">Settings</h2>
 
           <fieldset className="settings-section">
             <legend>Layout mode</legend>
@@ -62,9 +72,9 @@ const SettingsModal = forwardRef<SettingsModalHandle, SettingsModalProps>(
                 checked={layoutMode === "grid"}
                 onChange={() => onChange("grid")}
               />
-              <span>
-                <strong>Grid</strong>
-                <small>Clean rows, instant layout</small>
+              <span className="settings-radio-text">
+                <strong className="settings-radio-label">Grid</strong>
+                <small className="settings-radio-hint">Clean rows, instant layout</small>
               </span>
             </label>
             <label className="settings-radio">
@@ -75,11 +85,30 @@ const SettingsModal = forwardRef<SettingsModalHandle, SettingsModalProps>(
                 checked={layoutMode === "physics"}
                 onChange={() => onChange("physics")}
               />
-              <span>
-                <strong>Physics</strong>
-                <small>Gravity-based simulation</small>
+              <span className="settings-radio-text">
+                <strong className="settings-radio-label">Physics</strong>
+                <small className="settings-radio-hint">Gravity-based simulation</small>
               </span>
             </label>
+          </fieldset>
+
+          <fieldset className="settings-section">
+            <legend>Theme</legend>
+            {themes.map((t) => (
+              <label key={t.value} className="settings-radio">
+                <input
+                  type="radio"
+                  name="theme"
+                  value={t.value}
+                  checked={theme === t.value}
+                  onChange={() => onThemeChange(t.value)}
+                />
+                <span className="settings-radio-text">
+                  <strong className="settings-radio-label">{t.label}</strong>
+                  <small className="settings-radio-hint">{t.description}</small>
+                </span>
+              </label>
+            ))}
           </fieldset>
 
           <fieldset className="settings-section">

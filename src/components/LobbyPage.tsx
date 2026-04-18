@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SessionUser } from "../types/auth";
+import "./AuthPage.css";
+import "./LobbyPage.css";
 
 interface ActiveRoom {
   name: string;
@@ -58,8 +60,8 @@ export default function LobbyPage({ user, onJoinRoom, onLogout }: LobbyPageProps
   };
 
   return (
-    <div className="page-wrapper">
-      <div className="page-card page-card--wide">
+    <main className="page-wrapper">
+      <article className="page-card page-card--wide">
         <header className="page-header">
           <div>
             <h1 className="page-title">boom</h1>
@@ -67,14 +69,10 @@ export default function LobbyPage({ user, onJoinRoom, onLogout }: LobbyPageProps
           </div>
           <div className="lobby-user">
             {user.avatar && (
-              <img
-                src={user.avatar}
-                alt=""
-                className="lobby-avatar"
-              />
+              <img src={user.avatar} alt="" className="lobby-avatar" />
             )}
             <span className="lobby-username">{user.username}</span>
-            <button type="button" className="subtle-link" onClick={onLogout}>
+            <button type="button" className="lobby-logout" onClick={onLogout}>
               Log out
             </button>
           </div>
@@ -84,7 +82,7 @@ export default function LobbyPage({ user, onJoinRoom, onLogout }: LobbyPageProps
           <form onSubmit={handleCreate} className="lobby-create-form">
             <input
               type="text"
-              className="input"
+              className="lobby-input"
               placeholder="Room name"
               value={newRoom}
               onChange={(e) => setNewRoom(e.target.value)}
@@ -123,7 +121,7 @@ export default function LobbyPage({ user, onJoinRoom, onLogout }: LobbyPageProps
             </ul>
           )}
         </section>
-      </div>
-    </div>
+      </article>
+    </main>
   );
 }

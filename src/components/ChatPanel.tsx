@@ -1,5 +1,6 @@
 import { useChat, type ReceivedChatMessage } from "@livekit/components-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import "./ChatPanel.css";
 
 type MergedItem =
   | { type: "chat"; msg: ReceivedChatMessage; ts: number }
@@ -34,7 +35,7 @@ export default function ChatPanel({ open, onClose, onError, systemMessages }: Ch
   const { chatMessages, send, isSending } = useChat();
   const [draft, setDraft] = useState("");
   const [sendError, setSendError] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLLIElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const autoResize = useCallback(() => {
@@ -65,7 +66,7 @@ export default function ChatPanel({ open, onClose, onError, systemMessages }: Ch
     }
   };
 
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
 
   const handleDrag = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -86,49 +87,59 @@ export default function ChatPanel({ open, onClose, onError, systemMessages }: Ch
   }, []);
 
   return (
-    <div className={`chat-panel${open ? "" : " chat-panel--hidden"}`} ref={panelRef}>
-      <div className="chat-drag-handle focus-divider focus-divider--vertical" onMouseDown={handleDrag} />
-      <div className="chat-header">
-        <span>Chat</span>
+    <aside
+      ref={panelRef}
+      aria-label="Chat"
+      className={`chat-panel${open ? "" : " chat-panel--hidden"}`}
+    >
+      <div
+        className="chat-drag-handle focus-divider focus-divider--vertical"
+        onMouseDown={handleDrag}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize chat panel"
+      />
+      <header className="chat-header">
+        <h2 className="chat-header-title">Chat</h2>
         <button className="chat-close" onClick={onClose} aria-label="Close chat">
           &times;
         </button>
-      </div>
+      </header>
 
-      <div className="chat-messages">
+      <ol className="chat-messages">
         {mergedMessages(chatMessages, systemMessages).map((item) =>
           item.type === "system" ? (
-            <div key={item.id} className="chat-system">
+            <li key={item.id} className="chat-system">
               {item.text}
-            </div>
+            </li>
           ) : (
-            <div key={item.msg.id} className="chat-entry">
+            <li key={item.msg.id} className="chat-entry">
               <div className="chat-meta">
                 <span>{item.msg.from?.name || item.msg.from?.identity || "Unknown"}</span>
-                <span>
+                <time dateTime={item.msg.timestamp ? new Date(item.msg.timestamp).toISOString() : undefined}>
                   {item.msg.timestamp
                     ? new Date(item.msg.timestamp).toLocaleTimeString([], {
                         hour: "numeric",
                         minute: "2-digit",
                       })
                     : ""}
-                </span>
+                </time>
               </div>
-              <div
+              <p
                 className={`chat-bubble ${
                   item.msg.from?.isLocal ? "chat-bubble--local" : "chat-bubble--remote"
                 }`}
               >
                 {item.msg.message}
-              </div>
-            </div>
+              </p>
+            </li>
           ),
         )}
-        <div ref={messagesEndRef} />
-      </div>
+        <li ref={messagesEndRef} aria-hidden="true" />
+      </ol>
 
-      <form className="chat-form line-top" onSubmit={handleSubmit}>
-        <div className={`chat-input-wrap${sendError ? " chat-input--error" : ""}`}>
+      <form className="chat-form" onSubmit={handleSubmit}>
+        <div className={`chat-input-wrap${sendError ? " chat-input-wrap--error" : ""}`}>
           <textarea
             ref={textareaRef}
             className="chat-input"
@@ -157,6 +168,6 @@ export default function ChatPanel({ open, onClose, onError, systemMessages }: Ch
         </div>
         {sendError && <span className="chat-send-error">{sendError}</span>}
       </form>
-    </div>
+    </aside>
   );
 }

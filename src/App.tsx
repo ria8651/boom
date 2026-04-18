@@ -5,6 +5,8 @@ import AuthPage from "./components/AuthPage";
 import LobbyPage from "./components/LobbyPage";
 import RoomPage from "./components/RoomPage";
 import SimDebugPage from "./components/SimDebugPage";
+import type { ThemeName } from "./components/SettingsModal";
+import "./components/ErrorBanner.css";
 import "./styles/debug.css";
 
 const SESSION_KEY = "boom:session";
@@ -32,12 +34,28 @@ function clearSession() {
 
 type AppView = "loading" | "auth" | "lobby" | "room";
 
+function loadTheme(): ThemeName {
+  const stored = localStorage.getItem("boom-theme");
+  return stored === "terminal" ? "terminal" : "default";
+}
+
 function App() {
   const [view, setView] = useState<AppView>("loading");
   const [user, setUser] = useState<SessionUser | null>(null);
   const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | null>(null);
   const [error, setError] = useState("");
   const [, setPath] = useState(window.location.pathname);
+  const [theme, setTheme] = useState<ThemeName>(loadTheme);
+
+  // Apply theme to <html> so [data-theme] token overrides kick in globally
+  useEffect(() => {
+    if (theme === "default") {
+      delete document.documentElement.dataset.theme;
+    } else {
+      document.documentElement.dataset.theme = theme;
+    }
+    localStorage.setItem("boom-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     const onPop = () => setPath(window.location.pathname);
@@ -170,27 +188,29 @@ function App() {
 
   if (view === "room" && connectionDetails) {
     return (
-      <div style={{ height: "100%" }}>
-        <RoomPage
-          connectionDetails={connectionDetails}
-          onLeave={handleLeave}
-        />
-      </div>
+      <RoomPage
+        connectionDetails={connectionDetails}
+        onLeave={handleLeave}
+        theme={theme}
+        onThemeChange={setTheme}
+      />
     );
   }
 
   // Lobby (default for authenticated users)
   return (
-    <div style={{ height: "100%" }}>
+    <>
       <LobbyPage
         user={user!}
         onJoinRoom={handleJoinRoom}
         onLogout={handleLogout}
       />
       {error && (
-        <div className="error-banner error-banner--toast">{error}</div>
+        <p role="alert" className="error-banner error-banner--toast">
+          {error}
+        </p>
       )}
-    </div>
+    </>
   );
 }
 

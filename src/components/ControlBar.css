@@ -1,0 +1,181 @@
+/* ── Control bar ─────────────────────────────────────────────── */
+
+.control-bar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: var(--control-bar-gap);
+  padding: var(--room-pad);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Inset top line */
+.control-bar::before {
+  content: "";
+  position: absolute;
+  left: var(--room-pad);
+  right: var(--room-pad);
+  top: 0;
+  height: var(--stroke-default);
+  background: var(--border-default);
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Button base + variants ──────────────────────────────────── */
+
+.control-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--size-min-touch);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-button);
+  color: var(--text-primary);
+  border: var(--stroke-default) solid var(--border-default);
+  border-radius: var(--radius-button);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--motion-hover);
+}
+
+.control-btn:hover {
+  background: var(--bg-button-hover);
+}
+
+.control-btn--muted {
+  color: var(--text-muted);
+}
+
+.control-btn--active {
+  background: var(--bg-button-hover);
+}
+
+.control-btn--pending {
+  color: var(--text-muted);
+  cursor: wait;
+}
+
+.control-btn--error {
+  color: var(--text-error);
+  border-color: var(--border-error);
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.control-btn--error:hover {
+  background: var(--bg-button);
+}
+
+.control-btn--sharing {
+  background: var(--bg-accent-ghost);
+  color: var(--accent);
+  border-color: var(--border-accent);
+}
+
+.control-btn--sharing:hover {
+  background: var(--bg-accent-ghost-hover);
+}
+
+.control-btn--danger {
+  background: transparent;
+  color: var(--text-error);
+  border-color: var(--border-error);
+}
+
+.control-btn--danger:hover {
+  background: var(--bg-error-ghost);
+}
+
+/* Chat button + badge */
+
+.control-btn--chat {
+  position: relative;
+}
+
+.chat-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--space-2);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-radius: var(--radius-badge);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-semibold);
+}
+
+/* Grouped button + device select (no gap between them) */
+
+.control-group .control-btn:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+
+.device-select {
+  min-height: var(--size-min-touch);
+  max-width: 10rem;
+  padding: var(--space-4);
+  background: var(--bg-button);
+  color: var(--text-primary);
+  border: var(--stroke-default) solid var(--border-default);
+  border-radius: 0 var(--radius-button) var(--radius-button) 0;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.device-select:hover {
+  background: var(--bg-button-hover);
+}
+
+/* Spinner icon */
+
+.spinner-icon {
+  animation: spin var(--motion-spinner) infinite;
+}
+
+/* ── Compact mode (buttons overflow) ─────────────────────────── */
+
+/* Toggled imperatively via data-compact, which avoids React state loops.
+   Labels are sr-only in compact mode so screen readers still get them. */
+
+.control-bar[data-compact="true"] .control-btn {
+  padding: var(--space-4);
+}
+
+.control-bar[data-compact="true"] .btn-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.control-bar[data-compact="true"] .device-select {
+  appearance: none;
+  max-width: 2rem;
+  padding: var(--space-4) var(--space-2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  text-indent: -9999px;
+}

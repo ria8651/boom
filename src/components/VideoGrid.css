@@ -1,0 +1,292 @@
+/* ── Video grid ──────────────────────────────────────────────── */
+
+.video-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Participant tile ────────────────────────────────────────── */
+
+.participant-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.participant-tile {
+  position: relative;
+  flex: 1 1 0;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-tile);
+  border: var(--stroke-tile-speaking) solid var(--border-default);
+  border-radius: var(--radius-tile);
+}
+
+.participant-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.participant-tile--screenshare {
+  background: var(--bg-tile-screenshare);
+}
+
+.participant-tile--screenshare video {
+  object-fit: contain;
+}
+
+.participant-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-icon-muted);
+}
+
+.participant-placeholder svg {
+  width: 40%;
+  height: 40%;
+}
+
+.participant-avatar {
+  width: 40%;
+  max-width: 128px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-badge);
+  opacity: 0.6;
+}
+
+/* ── Tile label (name + mic status + actions) ────────────────── */
+
+.participant-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--tile-label);
+  padding: 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: calc(var(--tile-label) * 0.45);
+}
+
+.participant-info .muted-icon {
+  width: var(--size-tile-action-icon);
+  height: var(--size-tile-action-icon);
+  opacity: 0.5;
+}
+
+.participant-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity var(--motion-focus-appear);
+}
+
+.participant-wrapper:hover .participant-actions,
+.participant-actions--pinned {
+  opacity: 1;
+}
+
+.tile-action-btn {
+  padding: var(--space-1);
+  background: none;
+  color: var(--text-dimmer);
+  border: none;
+  line-height: 0;
+  cursor: pointer;
+  transition: color var(--motion-hover);
+}
+
+.tile-action-btn svg {
+  width: var(--size-tile-action-icon);
+  height: var(--size-tile-action-icon);
+}
+
+.tile-action-btn:hover {
+  color: var(--text-secondary);
+}
+
+/* ── Tile resize handle ──────────────────────────────────────── */
+
+.tile-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  z-index: 2;
+  opacity: 0;
+  cursor: nwse-resize;
+  transition: opacity var(--motion-focus-appear);
+}
+
+.tile-resize-handle::before {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--border-strong);
+  border-bottom: 2px solid var(--border-strong);
+}
+
+.participant-wrapper:hover .tile-resize-handle {
+  opacity: 1;
+}
+
+/* ── Layout-debug replay button (physics mode) ───────────────── */
+
+.layout-debug-btn {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--border-default);
+  color: var(--text-muted);
+  border: none;
+  border-radius: var(--radius-row);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--motion-focus-appear),
+    background var(--motion-hover);
+}
+
+.video-grid:hover .layout-debug-btn {
+  opacity: 1;
+}
+
+.layout-debug-btn:hover {
+  background: var(--bg-hover-subtle);
+  color: var(--text-primary);
+}
+
+.layout-debug-btn:disabled {
+  color: rgb(16 194 238 / 0.7);
+  cursor: default;
+}
+
+/* ── Focus layout (big tile + sidebar strip) ─────────────────── */
+
+.focus-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: var(--room-gap);
+  padding: var(--room-pad);
+  overflow: hidden;
+}
+
+.focus-layout--row {
+  flex-direction: row;
+}
+
+.focus-layout--column {
+  flex-direction: column;
+}
+
+.focus-half {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.focus-half > .video-grid {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Focus divider (drag to resize) ──────────────────────────── */
+
+.focus-divider {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.focus-divider::before {
+  content: "";
+  position: absolute;
+  background: var(--border-default);
+  transition: background var(--motion-hover);
+}
+
+.focus-divider:hover::before,
+.focus-divider:active::before {
+  background: var(--border-strong);
+}
+
+/* Invisible hitbox for easier grab */
+.focus-divider::after {
+  content: "";
+  position: absolute;
+}
+
+.focus-divider--vertical {
+  width: var(--stroke-default);
+  cursor: col-resize;
+}
+
+.focus-divider--vertical::before {
+  inset: 0 0 0 0;
+  width: var(--stroke-default);
+}
+
+.focus-divider--vertical:hover::before,
+.focus-divider--vertical:active::before {
+  left: -1px;
+  width: 3px;
+}
+
+.focus-divider--vertical::after {
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  width: 11px;
+}
+
+.focus-divider--horizontal {
+  height: var(--stroke-default);
+  cursor: row-resize;
+}
+
+.focus-divider--horizontal::before {
+  inset: 0 0 0 0;
+  height: var(--stroke-default);
+}
+
+.focus-divider--horizontal:hover::before,
+.focus-divider--horizontal:active::before {
+  top: -1px;
+  height: 3px;
+}
+
+.focus-divider--horizontal::after {
+  left: 0;
+  right: 0;
+  top: -5px;
+  height: 11px;
+}
+
+/* Mobile tweaks */
+
+@media (max-width: 640px) {
+  .video-grid {
+    gap: var(--room-gap);
+    padding: 4px;
+  }
+}
