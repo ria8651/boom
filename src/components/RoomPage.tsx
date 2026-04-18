@@ -34,6 +34,7 @@ interface RoomPageProps {
   onLeave: (message?: string) => void;
   theme: ThemeName;
   onThemeChange: (theme: ThemeName) => void;
+  onInvite?: () => Promise<string>;
 }
 
 
@@ -48,6 +49,7 @@ function RoomInterior({
   onScreenShareSettingsChange,
   theme,
   onThemeChange,
+  onInvite,
 }: {
   chatOpen: boolean;
   setChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -59,6 +61,7 @@ function RoomInterior({
   onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
   theme: ThemeName;
   onThemeChange: (theme: ThemeName) => void;
+  onInvite?: () => Promise<string>;
 }) {
   const room = useRoomContext();
   // Update screen share encoding on the live room without triggering a reconnect
@@ -163,6 +166,7 @@ function RoomInterior({
                 pipSupported={pip.isSupported}
                 pipActive={pip.isActive}
                 onTogglePip={pip.isActive ? pip.close : pip.open}
+                onInvite={onInvite}
               />
             </footer>
           </div>
@@ -175,7 +179,7 @@ function RoomInterior({
   );
 }
 
-export default function RoomPage({ connectionDetails, onLeave, theme, onThemeChange }: RoomPageProps) {
+export default function RoomPage({ connectionDetails, onLeave, theme, onThemeChange, onInvite }: RoomPageProps) {
   const [roomError, setRoomError] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(
@@ -282,6 +286,7 @@ export default function RoomPage({ connectionDetails, onLeave, theme, onThemeCha
         onScreenShareSettingsChange={handleScreenShareSettingsChange}
         theme={theme}
         onThemeChange={onThemeChange}
+        onInvite={onInvite}
       />
     </LiveKitRoom>
   );

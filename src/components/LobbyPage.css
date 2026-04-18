@@ -146,3 +146,33 @@
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
+
+/* Invite copy button (on room rows) */
+
+.lobby-invite-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: transparent;
+  color: var(--text-muted);
+  border: var(--stroke-default) solid var(--border-raised);
+  border-radius: var(--radius-button);
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--motion-hover),
+    border-color var(--motion-hover);
+}
+
+.lobby-invite-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.lobby-invite-btn--copied {
+  color: var(--accent);
+  border-color: var(--border-accent);
+}
