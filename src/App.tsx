@@ -15,7 +15,12 @@ function decodeInviteRoom(token: string): string | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    // atob returns a binary string (one byte per char). Room names may contain
+    // multi-byte UTF-8 (e.g. 日本語), so decode bytes → UTF-8 rather than using
+    // the binary string directly.
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const payload = JSON.parse(new TextDecoder().decode(bytes));
     return typeof payload.room === "string" ? payload.room : null;
   } catch {
     return null;

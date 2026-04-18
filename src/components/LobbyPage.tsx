@@ -96,13 +96,17 @@ export default function LobbyPage({ user, onJoinRoom, onLogout, onError }: Lobby
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ room: roomName }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        onError(data?.error ?? `Failed to create invite (${res.status})`);
+        return;
+      }
       const { inviteToken } = await res.json();
       setInviteUrl(`${window.location.origin}/?invite=${inviteToken}`);
       setInviteCopied(false);
       inviteDialogRef.current?.showModal();
-    } catch {
-      // Silently fail
+    } catch (err) {
+      onError(`Failed to create invite (${err instanceof Error ? err.message : "unknown error"}).`);
     }
   };
 
@@ -193,7 +197,7 @@ export default function LobbyPage({ user, onJoinRoom, onLogout, onError }: Lobby
                   ) : (
                     <span className="lobby-room-count">{formatRelative(row.lastJoined)}</span>
                   )}
-                  {row.kind === "recent" && (
+                  {row.kind === "recent" ? (
                     <button
                       type="button"
                       className="lobby-forget-btn"
@@ -203,14 +207,15 @@ export default function LobbyPage({ user, onJoinRoom, onLogout, onError }: Lobby
                     >
                       ×
                     </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="lobby-invite-btn"
+                      onClick={() => handleShowInvite(row.name)}
+                    >
+                      Invite
+                    </button>
                   )}
-                  <button
-                    type="button"
-                    className="lobby-invite-btn"
-                    onClick={() => handleShowInvite(row.name)}
-                  >
-                    Invite
-                  </button>
                   <button
                     type="button"
                     className="lobby-join-btn lobby-join-btn--small"
