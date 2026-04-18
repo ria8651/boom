@@ -95,8 +95,7 @@
 /* Active rooms list */
 
 .lobby-rooms {
-  padding-top: var(--space-8);
-  border-top: var(--stroke-default) solid var(--border-default);
+  padding-top: var(--space-2);
 }
 
 .lobby-rooms-heading {

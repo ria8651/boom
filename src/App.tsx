@@ -4,6 +4,7 @@ import type { SessionUser } from "./types/auth";
 import AuthPage from "./components/AuthPage";
 import GuestJoinPage from "./components/GuestJoinPage";
 import LobbyPage from "./components/LobbyPage";
+import RecordingsPage from "./components/RecordingsPage";
 import RoomPage from "./components/RoomPage";
 import SimDebugPage from "./components/SimDebugPage";
 import ErrorBanner from "./components/ErrorBanner";
@@ -50,7 +51,7 @@ function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-type AppView = "loading" | "auth" | "lobby" | "room" | "guest";
+type AppView = "loading" | "auth" | "lobby" | "room" | "guest" | "recordings";
 
 function loadTheme(): ThemeName {
   const stored = localStorage.getItem("boom-theme");
@@ -298,6 +299,10 @@ function App() {
     );
   }
 
+  if (view === "recordings") {
+    return <RecordingsPage onBack={() => setView("lobby")} />;
+  }
+
   // Lobby (default for authenticated users)
   return (
     <>
@@ -306,6 +311,7 @@ function App() {
         onJoinRoom={handleJoinRoom}
         onLogout={handleLogout}
         onError={setError}
+        onShowRecordings={() => setView("recordings")}
       />
       {error && (
         <ErrorBanner message={error} onDismiss={() => setError("")} variant="toast" />

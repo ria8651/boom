@@ -200,6 +200,44 @@ test.describe("Recent rooms", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Recordings page
+// ---------------------------------------------------------------------------
+
+test.describe("RecordingsPage", () => {
+  test("renders grouped recordings with play/download/delete controls", async ({ page }) => {
+    // Mock the listing so the page has stable, populated content for the screenshot.
+    const now = Date.now();
+    const minute = 60_000;
+    await page.route("**/api/recordings", (route) => {
+      if (route.request().method() !== "GET") return route.fallback();
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          { filename: "standup-2026-04-18T090000.mp4", room: "standup", startedAt: now - 30 * minute, size: 142_336_000, inProgress: false },
+          { filename: "standup-2026-04-17T090000.mp4", room: "standup", startedAt: now - 24 * 60 * minute, size: 138_240_000, inProgress: false },
+          { filename: "design-review-2026-04-17T140000.mp4", room: "design-review", startedAt: now - 20 * 60 * minute, size: 482_344_960, inProgress: false },
+          { filename: "planning-2026-04-15T100000.mp4", room: "planning", startedAt: now - 3 * 24 * 60 * minute, size: 217_088_000, inProgress: false },
+        ]),
+      });
+    });
+
+    await devLogin(page);
+    await page.locator(".lobby-logout").filter({ hasText: "Recordings" }).click();
+    await expect(page.locator("h1")).toHaveText("Recordings");
+    await expect(page.locator(".recordings-group-heading").first()).toBeVisible();
+
+    // Spot-check the rendered controls
+    await expect(page.locator(".recordings-group-heading").filter({ hasText: "standup" })).toBeVisible();
+    await expect(page.locator(".recordings-group-heading").filter({ hasText: "design-review" })).toBeVisible();
+    await expect(page.locator("text=Play").first()).toBeVisible();
+    await expect(page.locator("text=Download").first()).toBeVisible();
+
+    await snap(page, "recordings");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Room join from lobby (mocked token, connection will fail)
 // ---------------------------------------------------------------------------
 

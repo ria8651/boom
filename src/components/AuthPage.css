@@ -22,8 +22,6 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--space-9);
-  padding-bottom: var(--space-9);
-  border-bottom: var(--stroke-default) solid var(--border-default);
 }
 
 .page-title {

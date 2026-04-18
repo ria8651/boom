@@ -6,9 +6,9 @@ Video conferencing with end-to-end encryption, powered by LiveKit.
 
 ![Lobby](docs/lobby.png)
 
-![In a room](docs/live-room.png)
-
 ![Chat](docs/live-chat.png)
+
+![Recordings](docs/recordings.png)
 
 Themeable — switch from the Settings modal:
 
@@ -29,92 +29,48 @@ Themeable — switch from the Settings modal:
 - Session persistence across page refreshes (auto-reconnect with fresh token)
 - Mobile responsive (container queries for icon-only controls, fullscreen chat overlay)
 - Accessible error handling (inline banners, device permission states on buttons)
+- Room recording via LiveKit Egress — start/stop from the control bar, list/play/download/delete from the lobby. Disk-space preflight and failure surfacing via LiveKit webhook
 
 ## Setup
 
-### Environment
+Copy `.env.example` to `.env` and fill in the required values (LiveKit keys, GitHub OAuth, session secret, allowlist). `npm run generate-keys` prints freshly-generated LiveKit and session secrets you can paste in. Everything else — URLs, ports, paths — has sensible defaults documented in `.env.example`.
 
-Copy `.env.example` to `.env.local` and fill in your values:
+> **One networking gotcha for local dev**: need to set `LIVEKIT_NODE_IP=<your LAN IP>` in `.env` (e.g. `192.168.1.166`). LiveKit advertises this address to browsers as the WebRTC media endpoint. Loopback address `127.0.0.1` doesn't work as the browser can't usefully reach over UDP through Docker's port forwarding — ICE will fail and you'll be kicked from the room a few seconds after joining. This applies whether you're running the full stack in compose or boom on the host.
 
-```bash
-LIVEKIT_API_KEY=...            # From your LiveKit server config
-LIVEKIT_API_SECRET=...         # From your LiveKit server config
-LIVEKIT_URL=wss://...          # Your LiveKit server WebSocket URL
-PORT=3000                      # Server port (default 3000)
-
-# GitHub OAuth (create at https://github.com/settings/developers)
-# Callback URL: http://localhost:3000/api/auth/github/callback
-GITHUB_CLIENT_ID=...
-GITHUB_CLIENT_SECRET=...
-
-# Access control — at least one must be set (fail closed if both empty)
-BOOM_ALLOWED_USERS=alice,bob   # Comma-separated GitHub usernames
-BOOM_ALLOWED_ORGS=my-org       # Comma-separated GitHub org slugs
-
-# Random string for signing session cookies
-BOOM_SESSION_SECRET=...
-```
-
-#### Generating a key pair
+### Full stack (docker compose)
 
 ```bash
-npm run generate-keys
+docker compose up -d --build
 ```
 
-Paste the output into `.env.local`.
+Boots boom, livekit, egress, and redis. App at `http://localhost:3000`.
 
-### Development
+Rebuild just boom after code changes:
+
+```bash
+docker compose up -d --build boom
+```
+
+### Local dev (boom on the host, rest in compose)
 
 ```bash
 npm install
+cp .env.example .env
+docker compose up -d livekit egress redis
 npm run dev
 ```
 
-The unified dev server runs on `http://localhost:3000` with Vite HMR.
-
-In dev mode, a "continue in dev mode" link appears on the login page to bypass GitHub OAuth. You can specify a username via the input field.
+Vite HMR at `http://localhost:3000`. In dev mode a "continue in dev mode" link bypasses GitHub OAuth. The mid-session recording-failure webhook from LiveKit → boom won't reach a host-run boom from the livekit container; everything else works.
 
 ### Testing
 
 ```bash
-# Run all tests (needs dev server running on port 3000)
-npm test
-
-# Run with headed browser
+npm test                      # Playwright e2e (needs dev server on :3000)
 npm test -- --headed
-
-# Run only the live test
 npm test -- e2e/live.spec.ts
 ```
 
-Screenshots are saved to `e2e/screenshots/`.
-
-### Production (Docker)
-
-```bash
-docker build -t boom .
-docker run -p 3000:3000 --env-file .env.local boom
-```
-
-### Docker Compose
-
-Add to your existing compose file alongside LiveKit:
-
-```yaml
-boom:
-  build: .
-  ports:
-    - "3000:3000"
-  environment:
-    - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-    - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-    - LIVEKIT_URL=${LIVEKIT_URL}
-    - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
-    - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-    - BOOM_SESSION_SECRET=${BOOM_SESSION_SECRET}
-    - BOOM_ALLOWED_USERS=${BOOM_ALLOWED_USERS}
-    - BOOM_ALLOWED_ORGS=${BOOM_ALLOWED_ORGS}
-```
+Screenshots land in `e2e/screenshots/`.
 
 ## How it works
 
@@ -122,7 +78,6 @@ Users sign in with GitHub. The server checks their username against the allowlis
 
 ## Future features
 
-- **Recording** — server-side recording via LiveKit Egress API
 - **Virtual backgrounds** — MediaProcessor pipeline for background blur/replacement
 - **Breakout rooms** — multiple LiveKit rooms with a coordination layer
 - **Hand raising** — participant metadata flag + UI indicator

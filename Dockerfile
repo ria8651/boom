@@ -12,5 +12,8 @@ COPY --from=build /app/server ./server
 COPY --from=build /app/package.json ./
 COPY --from=build /app/package-lock.json ./
 RUN npm ci --omit=dev
+# /out is where egress writes MP4s; the compose file mounts the host's
+# recordings directory here.
+ENV BOOM_RECORDINGS_DIR=/out
 EXPOSE 3000
 CMD ["npx", "tsx", "server/index.ts"]

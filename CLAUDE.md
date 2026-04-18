@@ -18,7 +18,7 @@ Access control via `BOOM_ALLOWED_USERS` (comma-separated GitHub usernames) and/o
 
 ## Worktrees
 
-When working in a worktree, if `.env.local` doesn't exist, copy `.env.example` to `.env.local` and fill in the values.
+When working in a worktree, if `.env` doesn't exist, copy `.env.example` to `.env` and fill in the values. Both `npm run dev` and `docker compose` read from `.env`.
 
 ## Notes
 

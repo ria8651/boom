@@ -17,7 +17,7 @@ const serverUrl = process.env.LIVEKIT_URL;
 
 if (!apiKey || !apiSecret || !serverUrl) {
   console.error("Missing LIVEKIT_API_KEY, LIVEKIT_API_SECRET, or LIVEKIT_URL.");
-  console.error("Run with --env-file=.env.local or set them in your shell.");
+  console.error("Run with --env-file=.env or set them in your shell.");
   process.exit(1);
 }
 

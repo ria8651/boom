@@ -20,6 +20,14 @@ body {
   font-family: var(--font-body);
 }
 
+/* Default <hr> styling — used as a section separator inside page cards.
+   Width matches the page-header / row stroke tokens. */
+hr {
+  margin: 0 0 var(--space-9);
+  border: 0;
+  border-top: var(--stroke-default) solid var(--border-default);
+}
+
 /* Native dialog centering + backdrop */
 dialog {
   margin: auto;

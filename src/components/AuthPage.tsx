@@ -31,6 +31,7 @@ export default function AuthPage() {
             <img src="/banner-flat.svg" alt="Bink Studios" className="page-branding" />
           </a>
         </header>
+        <hr />
         {error && (
           <p role="alert" className="error-banner error-banner--inline">
             {error}

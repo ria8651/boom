@@ -2,8 +2,10 @@ import { LiveKitRoom, RoomAudioRenderer, useChat, useParticipants, useRoomContex
 import {
   DisconnectReason,
   MediaDeviceFailure,
+  RoomEvent,
   ScreenSharePresets,
   VideoPreset,
+  type RemoteParticipant,
   type RoomOptions,
 } from "livekit-client";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -71,6 +73,33 @@ function RoomInterior({
     try { return JSON.parse(metadata ?? "{}").recording === true; } catch { return false; }
   })();
   const [recordingPending, setRecordingPending] = useState(false);
+  const [recordingSavedToast, setRecordingSavedToast] = useState(false);
+
+  // Server-pushed recording lifecycle messages (see server/recordings.ts
+  // handleWebhookEvent). The server sends these via RoomService.sendData with
+  // no local participant set, so filter to server-origin messages only.
+  useEffect(() => {
+    const handler = (payload: Uint8Array, participant: RemoteParticipant | undefined) => {
+      if (participant) return;
+      let msg: { type?: string; message?: string };
+      try {
+        msg = JSON.parse(new TextDecoder().decode(payload));
+      } catch {
+        return;
+      }
+      if (msg.type === "recording-error") {
+        setRoomError(msg.message ?? "Recording failed");
+        setRecordingPending(false);
+      } else if (msg.type === "recording-finished") {
+        setRecordingPending(false);
+        setRecordingSavedToast(true);
+      }
+    };
+    room.on(RoomEvent.DataReceived, handler);
+    return () => {
+      room.off(RoomEvent.DataReceived, handler);
+    };
+  }, [room, setRoomError]);
 
   const handleToggleRecording = useCallback(async () => {
     setRecordingPending(true);
@@ -186,6 +215,12 @@ function RoomInterior({
             </section>
             <footer className="room-footer">
               {roomError && <ErrorBanner message={roomError} onDismiss={() => setRoomError("")} />}
+              {recordingSavedToast && (
+                <ErrorBanner
+                  message="Recording saved. Open Recordings from the lobby to view it."
+                  onDismiss={() => setRecordingSavedToast(false)}
+                />
+              )}
               <ControlBar
                 chatOpen={chatOpen}
                 onToggleChat={() => setChatOpen((c) => !c)}

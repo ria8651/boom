@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SessionUser } from "../types/auth";
 import { forgetRoom, getRecentRooms, type RecentRoom } from "../recentRooms";
+import { formatRelative } from "../utils/time";
 import "./AuthPage.css";
 import "./LobbyPage.css";
 import "./SettingsModal.css";
@@ -11,45 +12,42 @@ interface ActiveRoom {
   createdAt: number;
 }
 
-function formatRelative(ts: number): string {
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
-
 interface LobbyPageProps {
   user: SessionUser;
   onJoinRoom: (room: string) => void;
   onLogout: () => void;
   onError: (message: string) => void;
+  onShowRecordings: () => void;
 }
 
-export default function LobbyPage({ user, onJoinRoom, onLogout, onError }: LobbyPageProps) {
+export default function LobbyPage({ user, onJoinRoom, onLogout, onError, onShowRecordings }: LobbyPageProps) {
   const [rooms, setRooms] = useState<ActiveRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [roomsFailed, setRoomsFailed] = useState(false);
   const [newRoom, setNewRoom] = useState("");
   const [error, setError] = useState("");
   const [recent, setRecent] = useState<RecentRoom[]>(() => getRecentRooms(user.username));
+  const failureCountRef = useRef(0);
 
   const fetchRooms = useCallback(async () => {
     try {
       const res = await fetch("/api/rooms");
       if (!res.ok) {
-        throw new Error(`Server returned ${res.status}`);
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? `server returned ${res.status}`);
       }
       setRooms(await res.json());
       setRoomsFailed(false);
+      failureCountRef.current = 0;
     } catch (err) {
+      // Keep showing the last successful room list and only surface the error
+      // after a few consecutive failures, to avoid toast-spam during transient
+      // upstream blips (e.g. LiveKit restart).
+      failureCountRef.current += 1;
       setRoomsFailed(true);
-      onError(
-        `Couldn't reach server (${err instanceof Error ? err.message : "unknown error"}).`,
-      );
+      if (failureCountRef.current >= 3) {
+        onError(`Can't list rooms: ${err instanceof Error ? err.message : "unknown error"}.`);
+      }
     } finally {
       setLoading(false);
     }
@@ -154,11 +152,15 @@ export default function LobbyPage({ user, onJoinRoom, onLogout, onError }: Lobby
               <img src={user.avatar} alt="" className="lobby-avatar" />
             )}
             <span className="lobby-username">{user.username}</span>
+            <button type="button" className="lobby-logout" onClick={onShowRecordings}>
+              Recordings
+            </button>
             <button type="button" className="lobby-logout" onClick={onLogout}>
               Log out
             </button>
           </div>
         </header>
+        <hr />
 
         <section className="lobby-create">
           <form onSubmit={handleCreate} className="lobby-create-form">

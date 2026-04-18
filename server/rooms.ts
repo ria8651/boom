@@ -6,9 +6,21 @@ export interface ActiveRoom {
   createdAt: number;
 }
 
+// Default for an all-on-localhost dev stack. Both code paths (server-side
+// HTTP via getLiveKitHttpUrl and the browser-facing URL handed out by
+// /api/token) fall back to this when nothing is configured.
+const DEFAULT_LIVEKIT_URL = "ws://localhost:7880";
+
+export function getLiveKitWsUrl(): string {
+  return process.env.LIVEKIT_URL ?? DEFAULT_LIVEKIT_URL;
+}
+
 export function getLiveKitHttpUrl(): string {
-  const url = process.env.LIVEKIT_URL ?? "";
-  // LiveKit clients want an https:// URL, but LIVEKIT_URL is wss://
+  // LIVEKIT_SERVER_URL is the in-cluster URL boom uses for server-side HTTP
+  // calls (docker DNS in compose, e.g. ws://livekit:7880). Falls back to the
+  // browser-facing LIVEKIT_URL for setups where the two are the same (host
+  // dev, single-URL production).
+  const url = process.env.LIVEKIT_SERVER_URL ?? getLiveKitWsUrl();
   return url.replace(/^wss:\/\//, "https://").replace(/^ws:\/\//, "http://");
 }
 

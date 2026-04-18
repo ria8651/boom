@@ -4,15 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development tsx watch --env-file=.env.local server/index.ts",
+    "dev": "NODE_ENV=development tsx watch --env-file=.env server/index.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "node --env-file=.env.local node_modules/.bin/playwright test",
+    "test": "playwright test",
     "test:unit": "vitest",
-    "screenshots": "node --env-file=.env.local node_modules/.bin/playwright test && cp e2e/screenshots/auth-page.png docs/auth.png && cp e2e/screenshots/lobby.png docs/lobby.png && cp e2e/screenshots/live-room.png docs/live-room.png && cp e2e/screenshots/live-chat.png docs/live-chat.png && cp e2e/screenshots/theme-terminal-room.png docs/theme-terminal.png",
+    "screenshots": "playwright test && cp e2e/screenshots/auth-page.png docs/auth.png && cp e2e/screenshots/lobby.png docs/lobby.png && cp e2e/screenshots/live-chat.png docs/live-chat.png && cp e2e/screenshots/theme-terminal-room.png docs/theme-terminal.png && cp e2e/screenshots/recordings.png docs/recordings.png",
     "start": "NODE_ENV=production tsx server/index.ts",
     "generate-keys": "node -e \"const c=require('crypto'); console.log('LIVEKIT_API_KEY=devkey-'+c.randomBytes(8).toString('hex')); console.log('LIVEKIT_API_SECRET='+c.randomBytes(32).toString('base64url')); console.log('BOOM_SESSION_SECRET='+c.randomBytes(32).toString('base64url'))\"",
-    "meet-token": "tsx --env-file=.env.local scripts/generate-meet-token.ts"
+    "meet-token": "tsx --env-file=.env scripts/generate-meet-token.ts"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.20",

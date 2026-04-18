@@ -3,8 +3,7 @@ import cookieParser from "cookie-parser";
 import fs from "fs";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-import { AccessToken, EgressClient } from "livekit-server-sdk";
-import { EncodedFileOutput } from "@livekit/protocol";
+import { AccessToken } from "livekit-server-sdk";
 import path from "path";
 import { fileURLToPath } from "url";
 import {
@@ -18,7 +17,18 @@ import {
   SESSION_COOKIE_OPTIONS,
   validateInviteToken,
 } from "./auth.js";
-import { getLiveKitHttpUrl, getRoomServiceClient, listActiveRooms } from "./rooms.js";
+import { getLiveKitWsUrl, listActiveRooms } from "./rooms.js";
+import {
+  RecordingError,
+  deleteRecordingHandler,
+  describeUpstreamError,
+  downloadRecordingHandler,
+  listRecordingsHandler,
+  recoverActiveEgresses,
+  startRoomRecording,
+  stopRoomRecording,
+  webhookHandler,
+} from "./recordings.js";
 
 const isDev = process.env.NODE_ENV === "development";
 const app = express();
@@ -58,6 +68,15 @@ const tokenLimiter = rateLimit({
 
 // Trust proxy (behind reverse proxy)
 app.set("trust proxy", 1);
+
+// LiveKit webhook posts signed JSON whose signature is a sha256 of the raw
+// body, so the handler must see the body unparsed. Register it before the JSON
+// middleware below.
+app.post(
+  "/api/livekit/webhook",
+  express.raw({ type: "*/*", limit: "64kb" }),
+  webhookHandler,
+);
 
 app.use(express.json({ limit: "1kb" }));
 app.use(cookieParser());
@@ -142,61 +161,16 @@ app.get("/api/rooms", authMiddleware, async (_req, res) => {
     res.json(rooms);
   } catch (err) {
     console.error("Failed to list rooms:", err);
-    res.status(500).json({ error: "Failed to list rooms" });
+    // 502: boom is fine, the upstream (LiveKit) isn't. Lets the client
+    // distinguish "the server is broken" from "we can't reach LiveKit".
+    res.status(502).json({ error: `LiveKit unavailable (${describeUpstreamError(err)})` });
   }
 });
 
 // --- Recording ---
 
-function getEgressClient(): EgressClient {
-  return new EgressClient(
-    getLiveKitHttpUrl(),
-    process.env.LIVEKIT_API_KEY,
-    process.env.LIVEKIT_API_SECRET,
-  );
-}
-
-// room name → egress ID
-const activeEgresses = new Map<string, string>();
-
 // Rebuild in-memory map on startup (survives server restarts while egress keeps running)
-try {
-  const egress = getEgressClient();
-  const active = await egress.listEgress({ active: true });
-  for (const e of active) {
-    if (e.roomName) activeEgresses.set(e.roomName, e.egressId);
-  }
-  if (activeEgresses.size > 0) {
-    console.log(`Recovered ${activeEgresses.size} active recording(s)`);
-  }
-} catch {
-  // Egress service may not be running — that's fine
-}
-
-async function setRoomRecordingMetadata(room: string, recording: boolean) {
-  const roomService = getRoomServiceClient();
-  try {
-    await roomService.updateRoomMetadata(room, JSON.stringify({ recording }));
-  } catch (err) {
-    // Room may have already been cleaned up — not fatal
-    console.warn(`Could not update metadata for room ${room}:`, err);
-  }
-}
-
-async function stopRoomRecording(room: string): Promise<boolean> {
-  const egressId = activeEgresses.get(room);
-  if (!egressId) return false;
-  try {
-    const egress = getEgressClient();
-    await egress.stopEgress(egressId);
-  } catch (err) {
-    // Egress may have already stopped on its own
-    console.warn(`Could not stop egress ${egressId}:`, err);
-  }
-  activeEgresses.delete(room);
-  await setRoomRecordingMetadata(room, false);
-  return true;
-}
+await recoverActiveEgresses();
 
 app.post("/api/recordings/start", tokenLimiter, authMiddleware, async (req, res) => {
   const { room } = req.body;
@@ -205,19 +179,14 @@ app.post("/api/recordings/start", tokenLimiter, authMiddleware, async (req, res)
     return;
   }
 
-  if (activeEgresses.has(room)) {
-    res.status(409).json({ error: "Room is already being recorded" });
-    return;
-  }
-
   try {
-    const egress = getEgressClient();
-    const output = new EncodedFileOutput({ filepath: "/out/{room_name}-{time}.mp4" });
-    const info = await egress.startRoomCompositeEgress(room, output);
-    activeEgresses.set(room, info.egressId);
-    await setRoomRecordingMetadata(room, true);
-    res.json({ egressId: info.egressId });
+    const egressId = await startRoomRecording(room);
+    res.json({ egressId });
   } catch (err) {
+    if (err instanceof RecordingError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
     console.error("Failed to start recording:", err);
     res.status(500).json({ error: "Failed to start recording" });
   }
@@ -237,6 +206,10 @@ app.post("/api/recordings/stop", tokenLimiter, authMiddleware, async (req, res) 
   }
   res.json({ ok: true });
 });
+
+app.get("/api/recordings", authMiddleware, listRecordingsHandler);
+app.get("/api/recordings/:filename", authMiddleware, downloadRecordingHandler);
+app.delete("/api/recordings/:filename", authMiddleware, deleteRecordingHandler);
 
 
 // --- LiveKit token ---
@@ -274,7 +247,7 @@ app.post("/api/token", tokenLimiter, authMiddleware, async (req, res) => {
 
   res.json({
     token: jwt,
-    serverUrl: process.env.LIVEKIT_URL,
+    serverUrl: getLiveKitWsUrl(),
     identity,
   });
 });
@@ -321,7 +294,7 @@ app.post("/api/invite/join", tokenLimiter, async (req, res) => {
   });
 
   const jwt = await token.toJwt();
-  res.json({ token: jwt, serverUrl: process.env.LIVEKIT_URL, identity, room: invite.room });
+  res.json({ token: jwt, serverUrl: getLiveKitWsUrl(), identity, room: invite.room });
 });
 
 // --- Static / Vite ---
