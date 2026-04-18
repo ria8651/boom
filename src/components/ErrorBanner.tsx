@@ -1,3 +1,5 @@
+import "./ErrorBanner.css";
+
 interface ErrorBannerProps {
   message: string;
   onDismiss: () => void;
@@ -6,7 +8,7 @@ interface ErrorBannerProps {
 
 function AlertIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="error-banner-icon">
       <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
     </svg>
   );
@@ -20,7 +22,7 @@ export default function ErrorBanner({ message, onDismiss, variant }: ErrorBanner
         <AlertIcon />
         {message}
       </span>
-      <button onClick={onDismiss} aria-label="Dismiss error">
+      <button className="error-banner-dismiss" onClick={onDismiss} aria-label="Dismiss error">
         &times;
       </button>
     </div>

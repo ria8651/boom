@@ -50,7 +50,7 @@ services:
     environment:
       EGRESS_CONFIG_BODY: '{"api_key":"${LIVEKIT_API_KEY}","api_secret":"${LIVEKIT_API_SECRET}","ws_url":"ws://livekit:7880","redis":{"address":"redis:6379"},"insecure":true}'
     volumes:
-      - ./recordings:/out
+      - ${BOOM_RECORDINGS_DIR:-./recordings}:/out
     depends_on:
       - livekit
       - redis

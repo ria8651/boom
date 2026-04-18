@@ -1,0 +1,123 @@
+/* ── Shared page layout (Auth + Lobby) ───────────────────────── */
+
+.page-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: var(--space-7);
+}
+
+.page-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.page-card--wide {
+  max-width: 560px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-9);
+  padding-bottom: var(--space-9);
+  border-bottom: var(--stroke-default) solid var(--border-default);
+}
+
+.page-title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--text-muted);
+}
+
+.page-branding {
+  display: block;
+  height: 3rem;
+  opacity: 0.2;
+  filter: invert(1);
+}
+
+/* ── Auth-specific ───────────────────────────────────────────── */
+
+.auth-card {
+  text-align: center;
+}
+
+.auth-header-text {
+  text-align: left;
+}
+
+.auth-github-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-9);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: var(--stroke-default) solid var(--border-raised);
+  border-radius: var(--radius-button);
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.auth-github-btn:hover {
+  background: var(--bg-button-secondary);
+}
+
+.auth-github-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: currentColor;
+}
+
+.auth-dev {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-9);
+}
+
+.auth-dev-input {
+  width: 6rem;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-dev-input);
+  color: var(--text-dimmer);
+  border: var(--stroke-default) solid var(--border-default);
+  border-radius: var(--radius-input);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  outline: none;
+}
+
+.auth-dev-submit {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  color: var(--text-dimmer);
+  border: none;
+  border-radius: var(--radius-input);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.auth-dev-submit:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover-subtle);
+}

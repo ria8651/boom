@@ -42,10 +42,12 @@ test.describe("Live room join", () => {
     // Close chat
     await page.locator(".chat-close").click();
 
-    // Leave — should return to lobby
+    // Leave — confirm the leave dialog, then return to lobby
     const leaveButton = page.locator(".control-btn--danger");
     await expect(leaveButton).toBeVisible();
     await leaveButton.click();
+    // Confirm the leave dialog
+    await page.locator("dialog").getByRole("button", { name: "Leave" }).click();
     await expect(page.locator(".lobby-rooms-heading")).toBeVisible({ timeout: 5_000 });
 
     await page.screenshot({

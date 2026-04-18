@@ -1,0 +1,42 @@
+/* ── Guest join page (invite-link landing) ───────────────────── */
+
+.guest-join-room {
+  margin: 0 0 var(--space-8);
+  color: var(--text-tertiary);
+  font-size: var(--text-base);
+  text-align: left;
+}
+
+.guest-join-room strong {
+  color: var(--text-primary);
+}
+
+.guest-join-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  text-align: left;
+}
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  color: var(--text-tertiary);
+  font-size: var(--text-md);
+}
+
+.field-input {
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: var(--stroke-default) solid var(--border-default);
+  border-radius: var(--radius-input);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  outline: none;
+}
+
+.field-input:focus {
+  border-color: var(--border-strong);
+}

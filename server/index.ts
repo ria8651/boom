@@ -9,12 +9,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   authMiddleware,
+  createInviteToken,
   createSessionToken,
   exchangeCode,
   fetchGitHubUser,
   getGitHubAuthUrl,
   isUserAllowed,
   SESSION_COOKIE_OPTIONS,
+  validateInviteToken,
 } from "./auth.js";
 import { getLiveKitHttpUrl, getRoomServiceClient, listActiveRooms } from "./rooms.js";
 
@@ -275,6 +277,51 @@ app.post("/api/token", tokenLimiter, authMiddleware, async (req, res) => {
     serverUrl: process.env.LIVEKIT_URL,
     identity,
   });
+});
+
+// --- Invites ---
+
+app.post("/api/invite", tokenLimiter, authMiddleware, (req, res) => {
+  const { room } = req.body;
+  if (!isValidString(room)) {
+    res.status(400).json({ error: "room is required" });
+    return;
+  }
+  res.json({ inviteToken: createInviteToken(room) });
+});
+
+app.post("/api/invite/join", tokenLimiter, async (req, res) => {
+  const { inviteToken, name } = req.body;
+  if (!isValidString(inviteToken, 512) || !isValidString(name)) {
+    res.status(400).json({ error: "inviteToken and name are required" });
+    return;
+  }
+
+  const invite = validateInviteToken(inviteToken);
+  if (!invite) {
+    res.status(401).json({ error: "Invalid or expired invite link." });
+    return;
+  }
+
+  const safeName = name.replace(/[^a-zA-Z0-9_\- ]/g, "").trim().slice(0, 32) || "guest";
+  const identitySuffix = Math.random().toString(16).slice(2, 6);
+  const identity = `guest-${safeName.replace(/\s+/g, "_")}-${identitySuffix}`;
+
+  const token = new AccessToken(
+    process.env.LIVEKIT_API_KEY,
+    process.env.LIVEKIT_API_SECRET,
+    { identity, name: safeName },
+  );
+  token.addGrant({
+    roomJoin: true,
+    room: invite.room,
+    canPublish: true,
+    canSubscribe: true,
+    canPublishData: true,
+  });
+
+  const jwt = await token.toJwt();
+  res.json({ token: jwt, serverUrl: process.env.LIVEKIT_URL, identity, room: invite.room });
 });
 
 // --- Static / Vite ---

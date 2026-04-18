@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { packTiles } from "../layout/packTiles.js";
 import type { TileLayout, LayoutMode } from "../layout/types.js";
 import { GAP, PAD, LABEL_HEIGHT, DEFAULT_ASPECT } from "../layout/constants.js";
+import "./VideoGrid.css";
 
 /* ── Icons ───────────────────────────────────────────────────── */
 
@@ -121,8 +122,14 @@ export function Tile({ trackRef, isFocused, onFocus, style, onResizeStart }: {
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
+  const participantName = trackRef.participant.name || trackRef.participant.identity;
+
   return (
-    <div className="participant-wrapper" style={style}>
+    <article
+      className="participant-wrapper"
+      aria-label={`${participantName}${isScreenShare ? " (screen share)" : ""}`}
+      style={style}
+    >
       <div
         ref={tileRef}
         className={`participant-tile${isScreenShare ? " participant-tile--screenshare" : ""}`}
@@ -145,31 +152,36 @@ export function Tile({ trackRef, isFocused, onFocus, style, onResizeStart }: {
           </div>
         )}
       </div>
-      <div className="participant-info">
+      <footer className="participant-info">
         {isMicMuted && !isScreenShare && <MicOffIcon />}
         <span>
-          {trackRef.participant.name || trackRef.participant.identity}
+          {participantName}
           {isScreenShare ? " (screen)" : ""}
         </span>
-        <span className="participant-actions">
+        <span className={`participant-actions${isFocused ? " participant-actions--pinned" : ""}`}>
           {hasVideo && !isFullscreen && (
             <button className="tile-action-btn" onClick={enterFullscreen} aria-label="Fullscreen">
               <FullscreenIcon />
             </button>
           )}
           <button
-            className={`tile-action-btn${isFocused ? " tile-action-btn--active" : ""}`}
+            className="tile-action-btn"
             onClick={onFocus}
             aria-label={isFocused ? "Unpin" : "Pin"}
           >
             {isFocused ? <UnpinIcon /> : <PinIcon />}
           </button>
         </span>
-      </div>
+      </footer>
       {onResizeStart && (
-        <div className="tile-resize-handle" onMouseDown={onResizeStart} />
+        <div
+          className="tile-resize-handle"
+          onMouseDown={onResizeStart}
+          role="separator"
+          aria-label="Resize tile"
+        />
       )}
-    </div>
+    </article>
   );
 }
 
@@ -322,6 +334,7 @@ export function MiniGrid({ tracks, onFocus, focusedKeys, layoutMode, containerSi
           className="layout-debug-btn"
           onClick={toggleSimulation}
           aria-label={isAnimating ? "Stop simulation" : "Replay layout simulation"}
+          disabled={isAnimating}
         >
           {isAnimating ? "\u25A0" : "\u25B6"}
         </button>
@@ -433,6 +446,9 @@ function Divider({ direction, onResize, containerWidth, containerHeight }: {
     <div
       className={`focus-divider focus-divider--${direction === "row" ? "vertical" : "horizontal"}`}
       onMouseDown={handleMouseDown}
+      role="separator"
+      aria-orientation={direction === "row" ? "vertical" : "horizontal"}
+      aria-label="Resize panels"
     />
   );
 }

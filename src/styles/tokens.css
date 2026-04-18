@@ -1,0 +1,192 @@
+/* ── Design tokens ────────────────────────────────────────────
+ *
+ * Semantic tokens only — named for where they're used. Components
+ * reference these, never raw values. Themes override whichever
+ * ones they want to retarget via [data-theme="name"] blocks.
+ *
+ * Runtime switch:
+ *   document.documentElement.dataset.theme = "name"
+ * ─────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Color: backgrounds ────────────────────────────────────── */
+  --bg-page: rgb(34 34 34);
+  --bg-surface: rgb(40 40 40);
+  --bg-surface-raised: rgb(44 44 44);
+  --bg-surface-hover: rgb(55 55 55);
+  --bg-button: rgb(44 44 44);
+  --bg-button-hover: rgb(55 55 55);
+  --bg-button-secondary: rgb(50 50 50);
+  --bg-button-secondary-hover: rgb(65 65 65);
+  --bg-tile: rgb(40 40 40);
+  --bg-tile-screenshare: rgb(30 30 30);
+  --bg-chat-bubble-local: rgb(16 194 238 / 0.15);
+  --bg-chat-bubble-remote: rgb(50 50 50);
+  --bg-hover-subtle: rgb(255 255 255 / 0.06);
+  --bg-row: rgb(255 255 255 / 0.03);
+  --bg-row-hover: rgb(255 255 255 / 0.06);
+  --bg-error: rgb(249 31 49 / 0.9);
+  --bg-error-ghost: rgb(249 31 49 / 0.1);
+  --bg-accent-ghost: rgb(16 194 238 / 0.15);
+  --bg-accent-ghost-hover: rgb(16 194 238 / 0.25);
+  --bg-backdrop: rgb(0 0 0 / 0.6);
+
+  /* ── Color: text ───────────────────────────────────────────── */
+  --text-primary: rgb(231 231 231);
+  --text-secondary: rgb(220 220 220);
+  --text-tertiary: rgb(190 190 190);
+  --text-muted: rgb(150 150 150);
+  --text-dim: rgb(120 120 120);
+  --text-dimmer: rgb(100 100 100);
+  --text-on-accent: #fff;
+  --text-accent: #10c2ee;
+  --text-accent-hover: #2ecdf2;
+  --text-error: #f91f31;
+  --text-placeholder: rgb(100 100 100);
+  --text-icon-muted: rgb(255 255 255 / 0.15);
+
+  /* ── Color: borders / lines ────────────────────────────────── */
+  --border-default: rgb(255 255 255 / 0.08);
+  --border-raised: rgb(255 255 255 / 0.12);
+  --border-strong: rgb(255 255 255 / 0.15);
+  --border-dialog: rgb(60 60 60);
+  --border-accent: #10c2ee;
+  --border-error: #f91f31;
+
+  /* ── Color: accent ─────────────────────────────────────────── */
+  --accent: #10c2ee;
+  --accent-hover: #0eadd6;
+  --danger: #d32f2f;
+
+  /* ── Typography ────────────────────────────────────────────── */
+  --font-body: "Open Sans", system-ui, sans-serif;
+  --font-heading: "Chivo", sans-serif;
+
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.8125rem;   /* 13px */
+  --text-md: 0.875rem;    /* 14px */
+  --text-base: 0.9375rem; /* 15px */
+  --text-lg: 1rem;
+  --text-xl: 1.1rem;
+  --text-2xl: 2rem;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ── Spacing ───────────────────────────────────────────────── */
+  --space-1: 0.125rem;   /* 2px */
+  --space-2: 0.25rem;    /* 4px */
+  --space-3: 0.375rem;   /* 6px */
+  --space-4: 0.5rem;     /* 8px */
+  --space-5: 0.625rem;   /* 10px */
+  --space-6: 0.75rem;    /* 12px */
+  --space-7: 1rem;       /* 16px */
+  --space-8: 1.25rem;    /* 20px */
+  --space-9: 1.5rem;     /* 24px */
+  --space-10: 2rem;      /* 32px */
+
+  /* Room-specific spacing (also read by JS via getComputedStyle) */
+  --room-pad: 1rem;
+  --room-gap: 8px;
+  --tile-label: 32px;
+  --control-bar-gap: var(--space-4);
+  --chat-width: clamp(260px, 30vw, 360px);
+
+  /* ── Shape (per-component so themes can make things sharp/pill) ─ */
+  --radius-button: 4px;
+  --radius-input: 4px;
+  --radius-tile: 4px;
+  --radius-dialog: 12px;
+  --radius-bubble: 12px;
+  --radius-badge: 9999px;
+  --radius-row: 6px;
+  --radius-toast: 6px;
+  --radius-radio: 8px;
+
+  --stroke-default: 1px;
+
+  /* ── Sizing ────────────────────────────────────────────────── */
+  --size-min-touch: 44px;   /* WCAG min touch target */
+  --size-tile-action-icon: calc(var(--tile-label) * 0.45);
+
+  /* ── Motion ────────────────────────────────────────────────── */
+  --motion-hover: 150ms cubic-bezier(0.33, 1, 0.68, 1);
+  --motion-focus-appear: 150ms cubic-bezier(0.33, 1, 0.68, 1);
+  --motion-spinner: 0.8s linear;
+}
+
+/* ── Terminal theme ──────────────────────────────────────────── */
+
+[data-theme="terminal"] {
+  /* Backgrounds: everything pure black; elevation via green borders */
+  --bg-page: #000;
+  --bg-surface: #000;
+  --bg-surface-raised: #000;
+  --bg-surface-hover: #001a00;
+  --bg-button: #000;
+  --bg-button-hover: #001a00;
+  --bg-button-secondary: #000;
+  --bg-button-secondary-hover: #001a00;
+  --bg-tile: #000;
+  --bg-tile-screenshare: #000;
+  --bg-chat-bubble-local: rgb(0 255 136 / 0.15);
+  --bg-chat-bubble-remote: #001a00;
+  --bg-hover-subtle: rgb(0 255 0 / 0.05);
+  --bg-row: rgb(0 255 0 / 0.04);
+  --bg-row-hover: rgb(0 255 0 / 0.1);
+  --bg-error: rgb(255 0 64 / 0.9);
+  --bg-error-ghost: rgb(255 0 64 / 0.1);
+  --bg-accent-ghost: rgb(0 255 136 / 0.15);
+  --bg-accent-ghost-hover: rgb(0 255 136 / 0.25);
+  --bg-backdrop: rgb(0 0 0 / 0.85);
+
+  /* Text: shades of green */
+  --text-primary: #00ff00;
+  --text-secondary: #00dd00;
+  --text-tertiary: #00bb00;
+  --text-muted: #008800;
+  --text-dim: #006600;
+  --text-dimmer: #004400;
+  --text-on-accent: #000;
+  --text-accent: #00ff88;
+  --text-accent-hover: #00ffaa;
+  --text-error: #ff0040;
+  --text-placeholder: #006600;
+  --text-icon-muted: rgb(0 255 0 / 0.25);
+
+  /* Borders: always green, always visible */
+  --border-default: #00aa00;
+  --border-raised: #00cc00;
+  --border-strong: #00ff00;
+  --border-dialog: #00ff00;
+  --border-accent: #00ff88;
+  --border-error: #ff0040;
+
+  --accent: #00ff88;
+  --accent-hover: #00ffaa;
+  --danger: #ff0040;
+
+  /* Monospace */
+  --font-body: ui-monospace, "JetBrains Mono", "SF Mono", "Courier New", monospace;
+  --font-heading: ui-monospace, "JetBrains Mono", "SF Mono", "Courier New", monospace;
+
+  /* Sharp corners */
+  --radius-button: 0;
+  --radius-input: 0;
+  --radius-tile: 0;
+  --radius-dialog: 0;
+  --radius-bubble: 0;
+  --radius-badge: 0;
+  --radius-row: 0;
+  --radius-toast: 0;
+  --radius-radio: 0;
+
+  /* Thicker strokes for CRT feel */
+  --stroke-default: 2px;
+
+  /* Instant motion — no easing */
+  --motion-hover: 0ms;
+  --motion-focus-appear: 0ms;
+}

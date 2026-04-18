@@ -9,13 +9,14 @@ import {
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ConnectionDetails } from "../types/connection";
 import type { LayoutMode } from "../layout/types.js";
-import type { ScreenShareSettings } from "./SettingsModal.js";
+import type { ScreenShareSettings, ThemeName } from "./SettingsModal.js";
 import ErrorBanner from "./ErrorBanner";
 import VideoGrid from "./VideoGrid";
 import ControlBar from "./ControlBar";
 import ChatPanel from "./ChatPanel";
 import PipContent from "./PipContent";
 import { usePictureInPicture } from "../hooks/usePictureInPicture";
+import "./RoomPage.css";
 
 const customScreenSharePresets: Record<string, VideoPreset> = {
   h720fps60: new VideoPreset(1280, 720, 3_000_000, 60, "medium"),
@@ -31,6 +32,9 @@ function resolveScreenSharePreset(key: string): VideoPreset {
 interface RoomPageProps {
   connectionDetails: ConnectionDetails;
   onLeave: (message?: string) => void;
+  theme: ThemeName;
+  onThemeChange: (theme: ThemeName) => void;
+  onInvite?: () => Promise<string>;
 }
 
 
@@ -44,6 +48,9 @@ function RoomInterior({
   screenShareSettings,
   onScreenShareSettingsChange,
   roomName,
+  theme,
+  onThemeChange,
+  onInvite,
 }: {
   chatOpen: boolean;
   setChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -54,6 +61,9 @@ function RoomInterior({
   screenShareSettings: ScreenShareSettings;
   onScreenShareSettingsChange: (settings: ScreenShareSettings) => void;
   roomName: string;
+  theme: ThemeName;
+  onThemeChange: (theme: ThemeName) => void;
+  onInvite?: () => Promise<string>;
 }) {
   const room = useRoomContext();
   const { metadata } = useRoomInfo();
@@ -162,7 +172,7 @@ function RoomInterior({
 
   return (
     <>
-      <div className="room">
+      <main className="room">
         <div className="room-main">
           <div className="room-content">
             {recording && (
@@ -171,10 +181,10 @@ function RoomInterior({
                 Recording
               </div>
             )}
-            <div className="grid-area" ref={contentRef}>
+            <section aria-label="Video grid" className="room-grid-area" ref={contentRef}>
               <VideoGrid containerWidth={gridSize.width} containerHeight={gridSize.height} layoutMode={layoutMode} />
-            </div>
-            <div className="room-bottom">
+            </section>
+            <footer className="room-footer">
               {roomError && <ErrorBanner message={roomError} onDismiss={() => setRoomError("")} />}
               <ControlBar
                 chatOpen={chatOpen}
@@ -184,25 +194,28 @@ function RoomInterior({
                 onLayoutModeChange={onLayoutModeChange}
                 screenShareSettings={screenShareSettings}
                 onScreenShareSettingsChange={onScreenShareSettingsChange}
+                theme={theme}
+                onThemeChange={onThemeChange}
                 pipSupported={pip.isSupported}
                 pipActive={pip.isActive}
                 onTogglePip={pip.isActive ? pip.close : pip.open}
                 recording={recording}
                 recordingPending={recordingPending}
                 onToggleRecording={handleToggleRecording}
+                onInvite={onInvite}
               />
-            </div>
+            </footer>
           </div>
           <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} onError={setRoomError} systemMessages={systemMessages} />
         </div>
-      </div>
+      </main>
       <RoomAudioRenderer />
       {pip.pipWindow && <PipContent pipWindow={pip.pipWindow} layoutMode={layoutMode} />}
     </>
   );
 }
 
-export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) {
+export default function RoomPage({ connectionDetails, onLeave, theme, onThemeChange, onInvite }: RoomPageProps) {
   const [roomError, setRoomError] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(
@@ -308,6 +321,9 @@ export default function RoomPage({ connectionDetails, onLeave }: RoomPageProps) 
         screenShareSettings={screenShareSettings}
         onScreenShareSettingsChange={handleScreenShareSettingsChange}
         roomName={connectionDetails.room}
+        theme={theme}
+        onThemeChange={onThemeChange}
+        onInvite={onInvite}
       />
     </LiveKitRoom>
   );

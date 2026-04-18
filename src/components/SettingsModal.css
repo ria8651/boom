@@ -1,0 +1,225 @@
+/* ── Settings dialog ─────────────────────────────────────────── */
+
+.settings-dialog {
+  min-width: 280px;
+  max-width: 400px;
+  padding: var(--space-9);
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  border: var(--stroke-default) solid var(--border-dialog);
+  border-radius: var(--radius-dialog);
+}
+
+.settings-title {
+  margin: 0 0 var(--space-7);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-8);
+  padding: 0;
+  border: none;
+}
+
+.settings-section legend {
+  margin-bottom: var(--space-4);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.settings-radio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-radio);
+  cursor: pointer;
+  transition: background var(--motion-hover);
+}
+
+.settings-radio:hover {
+  background: var(--bg-surface-hover);
+}
+
+.settings-radio input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.settings-radio-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.settings-radio-label {
+  font-size: 0.9rem;
+  font-weight: var(--weight-medium);
+}
+
+.settings-radio-hint {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.settings-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-5);
+  font-size: 0.85rem;
+}
+
+.settings-select {
+  appearance: none;
+  padding: var(--space-4) var(--space-10) var(--space-4) var(--space-5);
+  background: var(--bg-surface-raised)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E")
+    no-repeat right 0.6rem center;
+  color: var(--text-secondary);
+  border: var(--stroke-default) solid var(--border-default);
+  border-radius: var(--radius-row);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color var(--motion-hover);
+}
+
+.settings-select:hover {
+  border-color: var(--border-raised);
+}
+
+.settings-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.settings-close-btn {
+  width: 100%;
+  padding: var(--space-4);
+  background: var(--bg-button-secondary);
+  color: var(--text-secondary);
+  border: none;
+  border-radius: var(--radius-radio);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--motion-hover);
+}
+
+.settings-close-btn:hover {
+  background: var(--bg-button-secondary-hover);
+}
+
+/* ── Leave-confirmation dialog ───────────────────────────────── */
+
+.leave-dialog {
+  min-width: 260px;
+  padding: var(--space-9);
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  border: var(--stroke-default) solid var(--border-dialog);
+  border-radius: var(--radius-dialog);
+  font-family: var(--font-body);
+}
+
+.leave-dialog-message {
+  margin: 0 0 var(--space-8);
+  font-size: var(--text-base);
+}
+
+.leave-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+.leave-dialog-btn {
+  padding: var(--space-4) var(--space-7);
+  background: var(--bg-button-secondary);
+  color: var(--text-secondary);
+  border: var(--stroke-default) solid var(--border-default);
+  border-radius: var(--radius-row);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.leave-dialog-btn--danger {
+  background: var(--danger);
+  color: var(--text-on-accent);
+  border-color: transparent;
+}
+
+/* ── Invite dialog (share a room link) ───────────────────────── */
+
+.invite-dialog {
+  min-width: 340px;
+  max-width: 480px;
+  padding: var(--space-8);
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  border: var(--stroke-default) solid var(--border-dialog);
+  border-radius: var(--radius-dialog);
+  font-family: var(--font-body);
+}
+
+.invite-dialog-message {
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-base);
+}
+
+.invite-url-input {
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: var(--space-7);
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-surface-raised);
+  color: var(--text-tertiary);
+  border: var(--stroke-default) solid var(--border-raised);
+  border-radius: var(--radius-input);
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: var(--text-sm);
+  outline: none;
+}
+
+.invite-url-input:focus {
+  border-color: var(--border-strong);
+}
+
+.invite-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+.invite-dialog-btn {
+  padding: var(--space-4) var(--space-7);
+  background: var(--bg-button-secondary);
+  color: var(--text-secondary);
+  border: var(--stroke-default) solid var(--border-default);
+  border-radius: var(--radius-button);
+  font-family: var(--font-heading);
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+.invite-dialog-btn:hover {
+  background: var(--bg-button-secondary-hover);
+}
+
+.invite-dialog-btn--primary {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: transparent;
+}
+
+.invite-dialog-btn--primary:hover {
+  background: var(--accent-hover);
+}

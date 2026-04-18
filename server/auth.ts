@@ -185,3 +185,43 @@ export const SESSION_COOKIE_OPTIONS = {
   maxAge: SESSION_EXPIRY_SECONDS * 1000,
   path: "/",
 };
+
+// --- Invite tokens (HMAC-signed, 24 h expiry) ---
+
+function getInviteExpirySeconds(): number {
+  const val = parseInt(process.env.BOOM_INVITE_EXPIRY_HOURS ?? "4", 10);
+  return (isNaN(val) || val <= 0 ? 4 : val) * 3600;
+}
+
+export function createInviteToken(room: string): string {
+  const payload = base64urlEncode({
+    type: "invite",
+    room,
+    exp: Math.floor(Date.now() / 1000) + getInviteExpirySeconds(),
+  });
+  const headerPayload = `${JWT_HEADER}.${payload}`;
+  return `${headerPayload}.${sign(headerPayload)}`;
+}
+
+export function validateInviteToken(token: string): { room: string } | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+
+  try {
+    const headerPayload = `${parts[0]}.${parts[1]}`;
+    const expected = sign(headerPayload);
+    const sig = Buffer.from(parts[2]);
+    const exp = Buffer.from(expected);
+    if (sig.length !== exp.length || !crypto.timingSafeEqual(sig, exp)) {
+      return null;
+    }
+
+    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+    if (payload.type !== "invite") return null;
+    if (typeof payload.exp === "number" && payload.exp < Date.now() / 1000) return null;
+    if (typeof payload.room !== "string" || !payload.room) return null;
+    return { room: payload.room };
+  } catch {
+    return null;
+  }
+}

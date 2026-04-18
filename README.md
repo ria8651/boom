@@ -10,10 +10,15 @@ Video conferencing with end-to-end encryption, powered by LiveKit.
 
 ![Chat](docs/live-chat.png)
 
+Themeable — switch from the Settings modal:
+
+![Terminal theme](docs/theme-terminal.png)
+
 ## Features
 
-- **GitHub OAuth authentication** with allowlist (usernames and/or org membership)
-- **Room lobby** — browse active rooms with participant counts, create and join rooms
+- GitHub OAuth authentication with allowlist (usernames and/or org membership)
+- Room lobby — browse active rooms with participant counts, create and join rooms
+- Themes — swap the whole visual system (colors, fonts, shapes, motion) via the Settings modal; ships with Classic and a Terminal CRT theme, driven by `[data-theme]` tokens
 - Aspect-aware tile packing — each tile sized to its stream's native aspect ratio, packed tightly with no grid
 - Pin mode — pin tiles to split the view with a resizable divider, both halves independently packed
 - Fullscreen video — click to watch a single stream in native fullscreen (Escape to exit)
