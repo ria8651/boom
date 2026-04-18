@@ -41,3 +41,17 @@ export async function listActiveRooms(): Promise<ActiveRoom[]> {
     createdAt: Number(r.creationTime ?? 0),
   }));
 }
+
+// Used to authorize actions that assume the caller has legitimate access to
+// the room (e.g. minting invite tokens). A user with a LiveKit JWT for a room
+// is only "in" the room once they actually connect — holding a token alone is
+// not enough to imply authorization.
+export async function isRoomParticipant(room: string, identity: string): Promise<boolean> {
+  try {
+    const participants = await getRoomServiceClient().listParticipants(room);
+    return participants.some((p) => p.identity === identity);
+  } catch {
+    // listParticipants throws if the room doesn't exist — treat as "not in it".
+    return false;
+  }
+}

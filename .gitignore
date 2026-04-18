@@ -1,6 +1,7 @@
 node_modules
 dist
-.env
+.env*
+!.env.example
 .claude/settings.local.json
 e2e/screenshots
 e2e/results

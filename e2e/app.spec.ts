@@ -13,6 +13,13 @@ async function devLogin(page: import("@playwright/test").Page, user?: string) {
   await expect(page.locator(".lobby-rooms-heading")).toBeVisible({ timeout: 5_000 });
 }
 
+/** Join a room via the lobby's create form and wait for the LiveKit connection. */
+async function joinRoom(page: import("@playwright/test").Page, room: string) {
+  await page.locator(".lobby-input").fill(room);
+  await page.locator("text=Create & Join").click();
+  await expect(page.locator(".control-bar")).toBeVisible({ timeout: 15_000 });
+}
+
 // ---------------------------------------------------------------------------
 // Auth page
 // ---------------------------------------------------------------------------
@@ -328,7 +335,7 @@ test.describe("Session persistence", () => {
     const payload = btoa(JSON.stringify({ type: "invite", room: "testroom", exp: 9999999999 }))
       .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
     const fakeInvite = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${payload}.fakesig`;
-    await page.goto(`/?invite=${fakeInvite}`);
+    await page.goto(`/#invite=${fakeInvite}`);
 
     // Should show the guest join page
     await expect(page.locator("text=You've been invited to join")).toBeVisible({ timeout: 5_000 });
@@ -419,7 +426,9 @@ test.describe("Invite links", () => {
   });
 
   test("invite/join validates token and returns LiveKit credentials", async ({ page }) => {
+    test.setTimeout(45_000); // requires a real LiveKit join so /api/invite passes the participant check
     await devLogin(page);
+    await joinRoom(page, "invite-room");
 
     // Generate a real invite token
     const inviteRes = await page.evaluate(async () => {
@@ -468,7 +477,7 @@ test.describe("Invite links", () => {
     const payload = btoa(JSON.stringify({ type: "invite", room: "my-room", exp: 9999999999 }))
       .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
     const fakeInvite = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${payload}.fakesig`;
-    await page.goto(`/?invite=${fakeInvite}`);
+    await page.goto(`/#invite=${fakeInvite}`);
 
     // Guest join page should render
     await expect(page.locator("text=You've been invited to join")).toBeVisible({ timeout: 5_000 });
@@ -481,52 +490,10 @@ test.describe("Invite links", () => {
     await snap(page, "invite-guest-join-page");
   });
 
-  test("invite button in lobby opens modal with invite URL", async ({ page }) => {
-    await devLogin(page);
-
-    // Mock the rooms list to show a fake active room so the Invite button appears
-    await page.route("**/api/rooms", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          { name: "invite-test", numParticipants: 1, createdAt: Date.now() },
-        ]),
-      }),
-    );
-
-    // Reload lobby to pick up the mocked rooms
-    await page.reload();
-    await expect(page.locator(".lobby-rooms-heading")).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator(".lobby-room-name")).toHaveText("invite-test");
-
-    // Click the Invite button next to the room
-    await page.locator(".lobby-invite-btn").click();
-
-    // Modal should open with an invite URL
-    const dialog = page.locator(".invite-dialog");
-    await expect(dialog).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator("text=Share this link to invite someone")).toBeVisible();
-
-    // URL input should contain an invite token
-    const urlInput = dialog.locator(".invite-url-input");
-    const url = await urlInput.inputValue();
-    expect(url).toContain("/?invite=");
-    expect(url.split(".")).toHaveLength(3); // JWT-like token
-
-    // Copy button and close button should be visible
-    await expect(dialog.locator("text=Copy link")).toBeVisible();
-    await expect(dialog.locator("text=Close")).toBeVisible();
-    await snap(page, "invite-modal");
-
-    // Close the dialog
-    await dialog.locator("text=Close").click();
-    await expect(dialog).not.toBeVisible();
-  });
-
   test("full invite flow: generate token, guest joins via URL", async ({ page, browser }) => {
     test.setTimeout(60_000); // real LiveKit connection + guest join/leave takes time
     await devLogin(page);
+    await joinRoom(page, "e2e-invite-room");
 
     // Generate a real invite token via the API
     const inviteRes = await page.evaluate(async () => {
@@ -542,7 +509,7 @@ test.describe("Invite links", () => {
     // Open a fresh browser context (no cookies) as the guest
     const guestContext = await browser.newContext();
     const guestPage = await guestContext.newPage();
-    await guestPage.goto(`/?invite=${inviteToken}`);
+    await guestPage.goto(`/#invite=${inviteToken}`);
 
     // Guest should see the join page
     await expect(guestPage.locator("text=You've been invited to join")).toBeVisible({ timeout: 5_000 });

@@ -97,8 +97,11 @@ function App() {
   // On mount: check for invite token first, then fall back to normal OAuth flow
   useEffect(() => {
     (async () => {
-      const params = new URLSearchParams(window.location.search);
-      const tok = params.get("invite");
+      // Invite tokens travel in the URL fragment (not the query string) so
+      // they don't leak to third parties via the Referer header.
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const queryParams = new URLSearchParams(window.location.search);
+      const tok = hashParams.get("invite") ?? queryParams.get("invite");
 
       if (tok) {
         setInviteToken(tok);
@@ -246,7 +249,7 @@ function App() {
     });
     if (!res.ok) throw new Error("Failed to generate invite link");
     const { inviteToken: tok } = await res.json();
-    return `${window.location.origin}/?invite=${tok}`;
+    return `${window.location.origin}/#invite=${tok}`;
   }, [connectionDetails?.room]);
 
   const handleLogout = useCallback(() => {

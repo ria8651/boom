@@ -420,18 +420,23 @@ function InviteButton({ onInvite }: { onInvite: () => Promise<string> }) {
   };
 
   const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = url;
-      ta.style.cssText = "position:fixed;opacity:0";
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      ta.remove();
+    // Prefer the async clipboard API, but it's only available in a secure
+    // context — over http://lan-ip it's undefined. Fall back to selecting the
+    // in-dialog input (NOT a new textarea on document.body, which is inert
+    // while the dialog is modal).
+    if (window.isSecureContext && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        return;
+      } catch { /* fall through to execCommand */ }
     }
-    setCopied(true);
+    const input = dialogRef.current?.querySelector<HTMLInputElement>(".invite-url-input");
+    if (!input) return;
+    input.select();
+    try {
+      if (document.execCommand("copy")) setCopied(true);
+    } catch { /* give up silently */ }
   }, [url]);
 
   return (
