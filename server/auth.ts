@@ -1,118 +1,124 @@
 import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 
-// --- GitHub OAuth helpers ---
+// --- Bastion SSO ---
+//
+// Boom relies on bastion (../bastion) for identity. The flow:
+//   unauthed → GET /api/auth/login → redirect to <bastion>/auth/login?service=<slug>
+//   bastion  → user authenticates → redirect to <self>/api/auth/bastion?bastion_token=<jwt>
+//   we verify the JWT against bastion's JWKS, enrich via /api/introspect, mint our
+//   own HMAC session cookie, redirect /
+//
+// LiveKit identity is keyed on `username` (bastion's display name claim). A user
+// renaming themselves on bastion would cause their LiveKit identity to change on
+// next login — acceptable for a small self-hosted setup.
 
-const GITHUB_AUTH_URL = "https://github.com/login/oauth/authorize";
-const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
-const GITHUB_API = "https://api.github.com";
-
-export interface GitHubUser {
-  login: string;
-  name: string | null;
-  avatar_url: string;
+export interface AuthConfig {
+  bastionOrigin: string;
+  serviceSlug: string;
 }
 
+export function loadAuthConfig(): AuthConfig | null {
+  const bastionOrigin = process.env.BASTION_ORIGIN;
+  if (!bastionOrigin) return null;
+  return {
+    bastionOrigin: bastionOrigin.replace(/\/$/, ""),
+    serviceSlug: process.env.BASTION_SERVICE_SLUG || "boom",
+  };
+}
+
+let cachedConfig: AuthConfig | null | undefined;
+let cachedJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+function getConfig(): AuthConfig | null {
+  if (cachedConfig === undefined) cachedConfig = loadAuthConfig();
+  return cachedConfig;
+}
+
+function getJwks(cfg: AuthConfig): ReturnType<typeof createRemoteJWKSet> {
+  if (!cachedJwks) {
+    cachedJwks = createRemoteJWKSet(new URL(`${cfg.bastionOrigin}/.well-known/jwks.json`));
+  }
+  return cachedJwks;
+}
+
+export function getBastionLoginUrl(cfg: AuthConfig): string {
+  const params = new URLSearchParams({ service: cfg.serviceSlug });
+  return `${cfg.bastionOrigin}/auth/login?${params}`;
+}
+
+interface BastionClaims extends JWTPayload {
+  username?: string;
+  svc?: string;
+}
+
+export async function verifyBastionToken(
+  cfg: AuthConfig,
+  token: string,
+): Promise<{ sub: string; username: string }> {
+  const { payload } = await jwtVerify<BastionClaims>(token, getJwks(cfg), {
+    issuer: cfg.bastionOrigin,
+    audience: cfg.serviceSlug,
+    algorithms: ["RS256"],
+  });
+  if (payload.svc !== cfg.serviceSlug) {
+    throw new Error("token svc claim mismatch");
+  }
+  if (typeof payload.sub !== "string" || !payload.sub) {
+    throw new Error("missing sub claim");
+  }
+  const username = typeof payload.username === "string" && payload.username
+    ? payload.username
+    : `user:${payload.sub.slice(0, 8)}`;
+  return { sub: payload.sub, username };
+}
+
+export interface IntrospectResult {
+  username: string | null;
+  email: string | null;
+  avatar: string | null;
+  granted: boolean;
+}
+
+export async function introspectBastionToken(
+  cfg: AuthConfig,
+  token: string,
+): Promise<IntrospectResult> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(`${cfg.bastionOrigin}/api/introspect`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      console.warn(`[auth] introspect returned ${res.status}`);
+      return { username: null, email: null, avatar: null, granted: false };
+    }
+    const data = (await res.json()) as Record<string, unknown>;
+    return {
+      username: typeof data.username === "string" ? data.username : null,
+      email: typeof data.email === "string" ? data.email : null,
+      avatar: typeof data.avatar === "string" ? data.avatar : null,
+      granted: data.granted === true,
+    };
+  } catch (err) {
+    console.warn("[auth] introspect failed:", err);
+    return { username: null, email: null, avatar: null, granted: false };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// --- Session JWT (simple HMAC-signed JSON, no external dep) ---
+
 export interface SessionUser {
+  sub: string;
   username: string;
   name: string;
   avatar: string;
 }
-
-export function getGitHubAuthUrl(state: string): string {
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  if (!clientId) throw new Error("GITHUB_CLIENT_ID is not set");
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    scope: "read:org",
-    state,
-  });
-  return `${GITHUB_AUTH_URL}?${params}`;
-}
-
-export const OAUTH_STATE_COOKIE = "boom_oauth_state";
-export const OAUTH_STATE_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV !== "development",
-  sameSite: "lax" as const,
-  maxAge: 10 * 60 * 1000,
-  path: "/",
-};
-
-export async function exchangeCode(code: string): Promise<string> {
-  const res = await fetch(GITHUB_TOKEN_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      client_id: process.env.GITHUB_CLIENT_ID,
-      client_secret: process.env.GITHUB_CLIENT_SECRET,
-      code,
-    }),
-  });
-
-  const data = (await res.json()) as Record<string, string>;
-  if (data.error) throw new Error(data.error_description || data.error);
-  return data.access_token;
-}
-
-export async function fetchGitHubUser(accessToken: string): Promise<GitHubUser> {
-  const res = await fetch(`${GITHUB_API}/user`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) throw new Error("Failed to fetch GitHub user");
-  return res.json() as Promise<GitHubUser>;
-}
-
-async function checkOrgMembership(accessToken: string, orgs: string[]): Promise<boolean> {
-  for (const org of orgs) {
-    try {
-      const res = await fetch(`${GITHUB_API}/user/memberships/orgs/${org}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/vnd.github+json",
-        },
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { state?: string };
-        if (data.state === "active") return true;
-        console.warn(`[auth] org "${org}" membership state=${data.state}, not allowed`);
-      } else {
-        const body = await res.text();
-        console.warn(
-          `[auth] org "${org}" membership check failed: ${res.status} ${res.statusText} — ${body.slice(0, 200)}`,
-        );
-      }
-    } catch (err) {
-      console.warn(`[auth] org "${org}" membership check errored:`, err);
-    }
-  }
-  return false;
-}
-
-export async function isUserAllowed(username: string, accessToken: string): Promise<boolean> {
-  const allowedUsers = (process.env.BOOM_ALLOWED_USERS ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-
-  const allowedOrgs = (process.env.BOOM_ALLOWED_ORGS ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-
-  // Fail closed: if no allowlist configured, deny everyone
-  if (allowedUsers.length === 0 && allowedOrgs.length === 0) return false;
-
-  if (allowedUsers.includes(username.toLowerCase())) return true;
-  if (allowedOrgs.length > 0) return checkOrgMembership(accessToken, allowedOrgs);
-  return false;
-}
-
-// --- Session JWT (simple HMAC-signed JSON, no external dep) ---
 
 function getSecret(): Buffer {
   const secret = process.env.BOOM_SESSION_SECRET;
@@ -140,7 +146,8 @@ const SESSION_EXPIRY_SECONDS = 24 * 60 * 60; // 24 hours
 export function createSessionToken(user: SessionUser): string {
   const payload = base64urlEncode({
     type: "session",
-    sub: user.username,
+    sub: user.sub,
+    username: user.username,
     name: user.name,
     avatar: user.avatar,
     exp: Math.floor(Date.now() / 1000) + SESSION_EXPIRY_SECONDS,
@@ -168,9 +175,11 @@ export function verifySessionToken(token: string): SessionUser | null {
       return null;
     }
     if (typeof payload.sub !== "string" || !payload.sub) return null;
+    if (typeof payload.username !== "string" || !payload.username) return null;
     return {
-      username: payload.sub,
-      name: payload.name ?? payload.sub,
+      sub: payload.sub,
+      username: payload.username,
+      name: payload.name ?? payload.username,
       avatar: payload.avatar ?? "",
     };
   } catch {
@@ -188,7 +197,22 @@ declare global {
   }
 }
 
+const DEV_USER: SessionUser = {
+  sub: "dev",
+  username: "dev",
+  name: "dev",
+  avatar: "",
+};
+
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  // Auth-off mode: BASTION_ORIGIN unset → inject a default dev identity so
+  // downstream handlers can always rely on req.user. Never expose unconfigured.
+  if (!getConfig()) {
+    req.user = DEV_USER;
+    next();
+    return;
+  }
+
   const token = req.cookies?.boom_session;
   if (!token) {
     res.status(401).json({ error: "Not authenticated" });

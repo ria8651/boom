@@ -11,14 +11,12 @@ import {
   authMiddleware,
   createInviteToken,
   createSessionToken,
-  exchangeCode,
-  fetchGitHubUser,
-  getGitHubAuthUrl,
-  isUserAllowed,
-  OAUTH_STATE_COOKIE,
-  OAUTH_STATE_COOKIE_OPTIONS,
+  getBastionLoginUrl,
+  introspectBastionToken,
+  loadAuthConfig,
   SESSION_COOKIE_OPTIONS,
   validateInviteToken,
+  verifyBastionToken,
 } from "./auth.js";
 import { getLiveKitWsUrl, isRoomParticipant, listActiveRooms } from "./rooms.js";
 import {
@@ -110,75 +108,52 @@ function isValidRoomName(s: unknown): s is string {
 
 // --- Auth routes ---
 
-app.get("/api/auth/github", authLimiter, (_req, res) => {
-  try {
-    const state = crypto.randomBytes(16).toString("base64url");
-    res.cookie(OAUTH_STATE_COOKIE, state, OAUTH_STATE_COOKIE_OPTIONS);
-    res.redirect(getGitHubAuthUrl(state));
-  } catch (err) {
-    res.status(500).json({ error: "GitHub OAuth not configured" });
+app.get("/api/auth/login", authLimiter, (_req, res) => {
+  const cfg = loadAuthConfig();
+  if (!cfg) {
+    res.status(404).json({ error: "Auth disabled (set BASTION_ORIGIN)" });
+    return;
   }
+  res.redirect(getBastionLoginUrl(cfg));
 });
 
-app.get("/api/auth/github/callback", authLimiter, async (req, res) => {
-  const code = req.query.code;
-  const state = req.query.state;
-  const cookieState = req.cookies?.[OAUTH_STATE_COOKIE];
-  // Always clear the state cookie — it's single-use regardless of outcome.
-  res.clearCookie(OAUTH_STATE_COOKIE, { path: "/" });
-
-  if (typeof code !== "string" || !code) {
-    res.redirect("/?error=missing_code");
+app.get("/api/auth/bastion", authLimiter, async (req, res) => {
+  const cfg = loadAuthConfig();
+  if (!cfg) {
+    res.status(404).json({ error: "Auth disabled" });
     return;
   }
-  if (
-    typeof state !== "string" ||
-    !state ||
-    typeof cookieState !== "string" ||
-    state !== cookieState
-  ) {
-    res.redirect("/?error=invalid_state");
+
+  const token = req.query.bastion_token;
+  if (typeof token !== "string" || !token) {
+    res.status(400).json({ error: "missing bastion_token" });
     return;
   }
 
   try {
-    const accessToken = await exchangeCode(code);
-    const ghUser = await fetchGitHubUser(accessToken);
+    const { sub, username } = await verifyBastionToken(cfg, token);
 
-    if (!(await isUserAllowed(ghUser.login, accessToken))) {
+    const enriched = await introspectBastionToken(cfg, token);
+    if (!enriched.granted) {
       res.redirect("/?error=not_allowed");
       return;
     }
 
+    const displayName = enriched.username ?? username;
     const sessionToken = createSessionToken({
-      username: ghUser.login,
-      name: ghUser.name ?? ghUser.login,
-      avatar: ghUser.avatar_url,
+      sub,
+      username: displayName,
+      name: displayName,
+      avatar: enriched.avatar ?? "",
     });
 
     res.cookie("boom_session", sessionToken, SESSION_COOKIE_OPTIONS);
     res.redirect("/");
   } catch (err) {
-    console.error("GitHub OAuth error:", err);
+    console.error("Bastion auth error:", err);
     res.redirect("/?error=auth_failed");
   }
 });
-
-// Dev-only: skip OAuth and log in as a test user (?user=alice to pick a name)
-if (isDev) {
-  app.get("/api/auth/dev", (req, res) => {
-    const username = typeof req.query.user === "string" && req.query.user
-      ? req.query.user.slice(0, 32)
-      : "dev";
-    const sessionToken = createSessionToken({
-      username,
-      name: username,
-      avatar: "",
-    });
-    res.cookie("boom_session", sessionToken, SESSION_COOKIE_OPTIONS);
-    res.redirect("/");
-  });
-}
 
 app.post("/api/auth/logout", (_req, res) => {
   res.clearCookie("boom_session", { path: "/" });

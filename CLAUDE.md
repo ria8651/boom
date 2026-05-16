@@ -13,8 +13,9 @@ Use `npx tsc -b`, not `tsc --noEmit`. Root tsconfig uses project references with
 
 ## Auth
 
-GitHub OAuth. Requires `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `BOOM_SESSION_SECRET` env vars.
-Access control via `BOOM_ALLOWED_USERS` (comma-separated GitHub usernames) and/or `BOOM_ALLOWED_ORGS` (comma-separated org slugs). If both empty, no one can log in (fail closed).
+Bastion SSO (../bastion). Set `BASTION_ORIGIN` to the bastion service URL (e.g. `https://auth.example.com`); `BASTION_SERVICE_SLUG` defaults to `boom`. Register boom at `<bastion>/admin/services` with Return URL = `<this host>/api/auth/bastion`. Requires `BOOM_SESSION_SECRET` for the local session cookie. Bastion grants are the access gate.
+
+When `BASTION_ORIGIN` is unset, auth is disabled and a default `dev` identity is injected into every request — fine for local hacking, never expose unconfigured.
 
 ## Worktrees
 

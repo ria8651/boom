@@ -21,6 +21,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.2",
     "helmet": "^8.1.0",
+    "jose": "^6.2.3",
     "livekit-client": "^2.18.1",
     "livekit-server-sdk": "^2.15.1",
     "react": "^19.2.5",

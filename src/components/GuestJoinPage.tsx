@@ -61,7 +61,7 @@ export default function GuestJoinPage({ room, inviteToken, onJoin, error }: Gues
             />
           </label>
           {error && <p role="alert" className="error-banner error-banner--inline">{error}</p>}
-          <button className="auth-github-btn" type="submit" disabled={loading || !name.trim()}>
+          <button className="auth-signin-btn" type="submit" disabled={loading || !name.trim()}>
             {loading ? "Joining…" : "Join room"}
           </button>
         </form>
